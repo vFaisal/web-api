@@ -4,12 +4,111 @@ generator client {
 
 datasource db {
   provider     = "mysql"
-  url          = env("DATABASE_URL")
+  url          = env("DATABASE_DEVELOPMENT_URL")
   relationMode = "prisma"
 }
 
-model Account {
-  id        Bytes    @id @db.Binary(16)
-  email     String   @db.VarChar(255)
-  createdAt DateTime @default(now()) @db.Timestamp(0)
+model User {
+  id                    BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId              String                      @unique @db.VarChar(16)
+  displayName           String?                     @db.VarChar(100)
+  email                 String                      @unique @db.VarChar(320)
+  passwordHash          String?                     @db.Text
+  verificationId        BigInt                      @unique @db.UnsignedBigInt
+  updatedAt             DateTime                    @updatedAt @db.Timestamp(0)
+  createdAt             DateTime                    @default(now()) @db.Timestamp(0)
+  verification          OTPVerification             @relation(fields: [verificationId], references: [id])
+  sessions              UserSession[]
+  thirdPartyCredentials UserThirdPartyCredentials[]
+}
+
+model OTPVerification {
+  id              BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  phoneOrEmail    String                @db.VarChar(320)
+  type            OPTVerificationType
+  signature       String                @unique @db.VarChar(128)
+  hashCode        String                @db.Text
+  attempts        Int                   @default(0) @db.UnsignedTinyInt
+  allowedAttempts Int                   @default(10) @db.UnsignedTinyInt
+  intent          OPTVerificationIntent
+  expires         DateTime              @db.Timestamp(0)
+  verifiedAt      DateTime?             @db.Timestamp(0)
+  createdAt       DateTime              @default(now()) @db.Timestamp(0)
+  user            User?
+
+  @@index([phoneOrEmail])
+}
+
+model UserSession {
+  id           BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId     String         @unique @db.VarChar(16)
+  userId       BigInt         @db.UnsignedBigInt
+  key          String?        @unique @db.VarChar(128)
+  accessToken  String         @db.Text
+  refreshToken String?        @db.Text
+  expires      DateTime       @db.Timestamp(0)
+  revokedAt    DateTime?      @db.Timestamp(0)
+  createdAt    DateTime       @default(now()) @db.Timestamp(0)
+  activity     UserActivity[]
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model UserThirdPartyCredentials {
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  userId       BigInt   @db.UnsignedBigInt
+  provider     Provider
+  accountId    String   @db.VarChar(50)
+  accessToken  String   @db.Text
+  refreshToken String   @db.Text
+  scope        String   @db.VarChar(200)
+  expriesAt    DateTime @db.Timestamp(0)
+  updatedAt    DateTime @updatedAt @db.Timestamp(0)
+  createdAt    DateTime @default(now()) @db.Timestamp(0)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, accountId])
+  @@index([userId])
+}
+
+model Visitor {
+  id           BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId     String         @unique @db.VarChar(16)
+  userAgent    String         @db.VarChar(200)
+  ipAddress    Int            @db.UnsignedInt
+  counterCode  String         @db.Char(2)
+  createdAt    DateTime       @default(now()) @db.Timestamp(0)
+  userActivity UserActivity[]
+}
+
+model UserActivity {
+  id        BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  sessionId BigInt      @db.UnsignedBigInt
+  visitorId BigInt      @db.UnsignedBigInt
+  publicId  String      @unique @db.VarChar(16)
+  event     String      @db.VarChar(100)
+  createdAt DateTime    @default(now()) @db.Timestamp(0)
+  session   UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitor   Visitor     @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([visitorId])
+}
+
+enum OPTVerificationIntent {
+  REGISTRATION
+}
+
+enum OPTVerificationType {
+  EMAIL
+  PHONE
+}
+
+enum Provider {
+  GOOGLE
+  APPLE
+  META
+  MICROSOFT
+  TWITTER
 }
