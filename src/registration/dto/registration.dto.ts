@@ -1,12 +1,13 @@
 import {IsDefined, Matches} from "class-validator";
+import Constants from "../../constants";
 
 export default class RegistrationDto {
     @IsDefined()
-    @Matches(/^[\w\.-]+@[\w\.-]+\.\w{2,4}$/)
+    @Matches(Constants.EMAIL_VALIDATION_REGEX) // Email regex
     email: string
 
     @Matches(/^[a-z0-9]{128}$/i)
     signature: string
-    @Matches(/^.{6,}$/)
+    @Matches(Constants.PASSWORD_VALIDATION_REGEX)
     password: string
 }

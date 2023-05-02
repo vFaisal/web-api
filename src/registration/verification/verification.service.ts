@@ -32,7 +32,7 @@ export class VerificationService {
                     version: argon2id
                 }),
                 signature: generateNanoId(128),
-                expires: new Date(unixTimestamp() + 900), // 15 min
+                expires: new Date(Date.now() + 900_000), // 15 min
             },
             select: {
                 signature: true
@@ -44,7 +44,7 @@ export class VerificationService {
         }
     }
 
-    public async verifyEmail({signature, code}: { signature: string, code: number }) {
+    public async verifyEmail({email, signature, code}: { email: string, signature: string, code: number }) {
         const verification = await this.prisma.oTPVerification.findUnique({
             where: {
                 signature: signature
@@ -54,11 +54,13 @@ export class VerificationService {
                 expires: true,
                 hashCode: true,
                 verifiedAt: true,
+                phoneOrEmail: true,
+                type: true,
                 attempts: true
             }
         });
 
-        if (!verification || verification.verifiedAt || verification.expires.getTime() <= unixTimestamp()) throw new BadRequestException("Verification token invalid.");
+        if (!verification || verification.verifiedAt || verification.type !== "EMAIL" || verification.phoneOrEmail !== email || Date.now() > verification.expires.getTime()) throw new BadRequestException("Verification token invalid.");
 
         if (verification.attempts >= 10) throw new BadRequestException("You have made too many attempts to verify this.")
 
@@ -69,15 +71,11 @@ export class VerificationService {
 
 
         await this.prisma.oTPVerification.update({
-            data: codeVerification ? {
+            data: {
                 attempts: {
                     increment: 1
                 },
-                verifiedAt: new Date()
-            } : {
-                attempts: {
-                    increment: 1
-                }
+                verifiedAt: codeVerification ? new Date() : undefined
             },
             where: {
                 id: verification.id

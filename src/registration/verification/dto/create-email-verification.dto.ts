@@ -1,8 +1,9 @@
 import {IsDefined, Matches} from "class-validator";
+import Constants from "../../../constants";
 
 export default class CreateEmailVerificationDto {
     @IsDefined()
-    @Matches(/^[\w\.-]+@[\w\.-]+\.\w{2,4}$/)
+    @Matches(Constants.EMAIL_VALIDATION_REGEX)
     email: string
 
 }

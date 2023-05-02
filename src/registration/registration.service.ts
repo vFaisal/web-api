@@ -4,11 +4,12 @@ import RegistrationDto from "./dto/registration.dto";
 import {generateNanoId, unixTimestamp} from "../utils";
 import {argon2id, hash} from "argon2";
 import {PrismaClientKnownRequestError} from "@prisma/client/runtime";
+import {AuthenticateService} from "../authenticate/authenticate.service";
 
 @Injectable()
 export class RegistrationService {
 
-    constructor(private readonly prisma: PrismaService) {
+    constructor(private readonly prisma: PrismaService, private authenticate: AuthenticateService) {
     }
 
     public async createAccount(params: RegistrationDto) {
@@ -18,7 +19,7 @@ export class RegistrationService {
             }
         });
         if (!verification || verification.intent !== "REGISTRATION" || verification.phoneOrEmail !== params.email || !verification.verifiedAt) throw new BadRequestException("Invalid signature");
-        if (verification.verifiedAt.getTime() <= unixTimestamp() - 3600) new BadRequestException("Signature has expired"); // 1 hour
+        if (verification.verifiedAt.getTime() <= Date.now() - 3600_000) new BadRequestException("Signature has expired"); // 1 hour
 
         const user = await this.prisma.user.create({
             data: {
@@ -33,11 +34,15 @@ export class RegistrationService {
             if (err.code == "P2002") throw new ConflictException();
             throw new InternalServerErrorException();
         });
+
         return {
-            id: user.publicId,
-            email: user.email,
-            displayName: user.displayName,
-            createdAt: user.createdAt,
+            account: {
+                id: user.publicId,
+                email: user.email,
+                displayName: user.displayName,
+                createdAt: user.createdAt,
+            },
+            credentials: await this.authenticate.createSession(user)
         }
     }
 }

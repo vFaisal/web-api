@@ -1,7 +1,7 @@
 import {Body, Controller, HttpCode, HttpStatus, Post, Put} from '@nestjs/common';
 import {VerificationService} from './verification.service';
 import CreateEmailVerificationDto from "./dto/create-email-verification.dto";
-import VerifiyEmailDto from "./dto/verifiy-email.dto";
+import VerifyEmailDto from "./dto/verify-email.dto";
 
 @Controller({
     path: "registration/verification",
@@ -20,7 +20,7 @@ export class VerificationController {
 
     @Put("/email")
     @HttpCode(HttpStatus.NO_CONTENT)
-    verifyEmail(@Body() body: VerifiyEmailDto) {
+    verifyEmail(@Body() body: VerifyEmailDto) {
         return this.verificationService.verifyEmail(body);
     }
 }
