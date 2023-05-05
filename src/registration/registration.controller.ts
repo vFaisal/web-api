@@ -1,6 +1,8 @@
-import {Body, Controller, Get, HttpCode, HttpStatus, Param, Post} from '@nestjs/common';
+import {Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards} from '@nestjs/common';
 import {RegistrationService} from './registration.service';
 import RegistrationDto from "./dto/registration.dto";
+import RecaptchaGuard from "../recaptcha/recaptcha.guard";
+import {RecaptchaAction} from "../recaptcha/recaptch.decorator";
 
 @Controller({
     path: "registration",

@@ -1,10 +1,10 @@
-import {Global, Injectable} from "@nestjs/common";
+import {Global, INestApplication, Injectable, OnModuleInit} from "@nestjs/common";
 import {ConfigService} from "@nestjs/config";
 import {PrismaClient, User} from "@prisma/client";
 
 
 @Injectable()
-export class PrismaService extends PrismaClient {
+export class PrismaService extends PrismaClient implements OnModuleInit {
     constructor(private config: ConfigService) {
         super({
             log: ['query', 'info', 'warn', 'error'],
@@ -15,9 +15,16 @@ export class PrismaService extends PrismaClient {
                 }
             }
         });
-        (async () =>
-                await this.$connect()
-        )();
+    }
+
+    async onModuleInit() {
+        await this.$connect();
         this.$queryRaw`SET @@boost_cached_queries = true`
+    }
+
+    async enableShutdownHooks(app: INestApplication) {
+        this.$on('beforeExit', async () => {
+            await app.close();
+        });
     }
 }
