@@ -28,7 +28,7 @@ export default class RecaptchaGuard implements CanActivate {
       throw new BadRequestException("We were unable to process your request due to an invalid or missing reCAPTCHA token.");
     }
 
-    const res = await fetch(`https://recaptchaenterprise.googleapis.com/v1/projects/${this.config.get("GOOGLE_PROJECT_ID")}/assessments?key${this.config.get("GOOGLE_API_KEY")}`, {
+    const res = await fetch(`https://recaptchaenterprise.googleapis.com/v1/projects/${this.config.get("GOOGLE_PROJECT_ID")}/assessments?key=${this.config.get("GOOGLE_API_KEY")}`, {
       method: "POST",
       body: JSON.stringify({
         event: {

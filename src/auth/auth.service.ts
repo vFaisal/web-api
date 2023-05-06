@@ -1,14 +1,15 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, CACHE_MANAGER, CacheStore, Inject, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
 import { JwtService } from "@nestjs/jwt";
 import { argon2id, verify } from "argon2";
 import { generateNanoId, unixTimestamp } from "../utils/util";
 import { User } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
+import { Cache } from "cache-manager";
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwt: JwtService, private config: ConfigService) {
+  constructor(private prisma: PrismaService, private jwt: JwtService, private config: ConfigService, @Inject(CACHE_MANAGER) private cache: Cache) {
   }
 
   public async authenticate(email: string, password: string) {
@@ -41,6 +42,15 @@ export class AuthService {
       algorithm: "HS512",
       secret: this.config.get("JWT_512_SECRET")
     });
+
+    //Cache the access token for revocation (We add await if we want to use cache service like redis);
+    await this.cache.set(`session:${accessToken}`, {
+      accountPublicId: user.publicId,
+      createdTimestampAt: unixTimestamp(),
+      revokedTimestampAt: null
+    }, 3600 * 1000 /* 1 hour same the access token expiration */);
+
+    //Add refresh token to database;
     await this.prisma.userSession.create({
       data: {
         publicId: generateNanoId(),
