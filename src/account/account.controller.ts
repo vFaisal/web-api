@@ -1,14 +1,20 @@
-import {AccountService} from "./account.service";
-import {Controller, Get, HttpCode} from "@nestjs/common";
+import { AccountService } from "./account.service";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
+import { AuthGuard } from "../auth/auth.guard";
+import { Request } from "express";
 
-@Controller()
+@Controller({
+  path: "account",
+  version: "1"
+})
 export class AccountController {
-    constructor(private readonly accountService: AccountService) {
-    }
+  constructor(private readonly accountService: AccountService) {
+  }
 
-    @Get("account/")
-    @HttpCode(200)
-    getAccount() {
-        return this.accountService.getAccount();
-    }
+  @Get()
+  @UseGuards(AuthGuard)
+  @HttpCode(200)
+  getAccount(@Req() request) {
+    return this.accountService.getAccount(request.accountPublicId);
+  }
 }
