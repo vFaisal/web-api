@@ -8,18 +8,20 @@ datasource db {
   relationMode = "prisma"
 }
 
-model User {
-  id                    BigInt                      @id @default(autoincrement()) @db.UnsignedBigInt
-  publicId              String                      @unique @db.VarChar(16)
-  displayName           String?                     @db.VarChar(100)
-  email                 String                      @unique @db.VarChar(320)
-  passwordHash          String?                     @db.Text
-  verificationId        BigInt                      @unique @db.UnsignedBigInt
-  updatedAt             DateTime                    @updatedAt @db.Timestamp(0)
-  createdAt             DateTime                    @default(now()) @db.Timestamp(0)
-  verification          OTPVerification             @relation(fields: [verificationId], references: [id])
-  sessions              UserSession[]
-  thirdPartyCredentials UserThirdPartyCredentials[]
+model Account {
+  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId       String   @unique @db.VarChar(16)
+  displayName    String?  @db.VarChar(100)
+  email          String   @unique @db.VarChar(320)
+  passwordHash   String?  @db.Text
+  verificationId BigInt   @unique @db.UnsignedBigInt
+  updatedAt      DateTime @updatedAt @db.Timestamp(0)
+  createdAt      DateTime @default(now()) @db.Timestamp(0)
+
+  verification OTPVerification @relation(fields: [verificationId], references: [id])
+
+  sessions            AccountSession[]
+  federatedIdentities AccountFederatedIdentities[]
 }
 
 model OTPVerification {
@@ -34,63 +36,80 @@ model OTPVerification {
   expires         DateTime              @db.Timestamp(0)
   verifiedAt      DateTime?             @db.Timestamp(0)
   createdAt       DateTime              @default(now()) @db.Timestamp(0)
-  user            User?
+  account         Account?
 
   @@index([phoneOrEmail])
 }
 
-model UserSession {
-  id           BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
-  publicId     String         @unique @db.VarChar(16)
-  userId       BigInt         @db.UnsignedBigInt
-  key          String?        @unique @db.VarChar(128)
-  accessToken  String         @db.Text
-  refreshToken String?        @db.Text
-  expires      DateTime       @db.Timestamp(0)
-  revokedAt    DateTime?      @db.Timestamp(0)
-  createdAt    DateTime       @default(now()) @db.Timestamp(0)
-  activity     UserActivity[]
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+enum SessionType {
+  FEDERATED_IDENTITY
+  EMAIL
 }
 
-model UserThirdPartyCredentials {
-  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  userId       BigInt   @db.UnsignedBigInt
-  provider     Provider
-  accountId    String   @db.VarChar(50)
-  accessToken  String   @db.Text
-  refreshToken String   @db.Text
-  scope        String   @db.VarChar(200)
-  expriesAt    DateTime @db.Timestamp(0)
-  updatedAt    DateTime @updatedAt @db.Timestamp(0)
-  createdAt    DateTime @default(now()) @db.Timestamp(0)
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model AccountSession {
+  id        BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  accountId BigInt      @db.UnsignedBigInt
+  type      SessionType
+  revokedAt DateTime?   @db.Timestamp(0)
+  createdAt DateTime    @default(now()) @db.Timestamp(0)
 
-  @@unique([provider, accountId])
-  @@index([userId])
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  tokens   AccountSessionTokens[]
+  activity AccountActivity[]
+
+  @@index([accountId])
+}
+
+model AccountSessionTokens {
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  sessionId BigInt   @db.UnsignedBigInt
+  visitorId BigInt   @unique @db.UnsignedBigInt
+  token     String   @unique @db.VarChar(32)
+  expires   DateTime @db.Timestamp(0)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+
+  session AccountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitor Visitor        @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model AccountFederatedIdentities {
+  id                BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  accountId         BigInt   @db.UnsignedBigInt
+  provider          Provider
+  providerAccountId String   @db.VarChar(100)
+  createdAt         DateTime @default(now()) @db.Timestamp(0)
+  account           Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([accountId])
 }
 
 model Visitor {
-  id           BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
-  publicId     String         @unique @db.VarChar(16)
-  userAgent    String         @db.VarChar(200)
-  ipAddress    Int            @db.UnsignedInt
-  counterCode  String         @db.Char(2)
-  createdAt    DateTime       @default(now()) @db.Timestamp(0)
-  userActivity UserActivity[]
+  id                   BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId             String                @unique @db.VarChar(16)
+  userAgent            String                @db.VarChar(200)
+  ipAddress            Int                   @db.UnsignedInt
+  counterCode          String                @db.Char(2)
+  region               String                @db.VarChar(100)
+  city                 String                @db.VarChar(100)
+  isp                  String                @db.VarChar(100)
+  createdAt            DateTime              @default(now()) @db.Timestamp(0)
+  accountActivity      AccountActivity[]
+  accountSessionTokens AccountSessionTokens?
 }
 
-model UserActivity {
-  id        BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
-  sessionId BigInt      @db.UnsignedBigInt
-  visitorId BigInt      @db.UnsignedBigInt
-  publicId  String      @unique @db.VarChar(16)
-  event     String      @db.VarChar(100)
-  createdAt DateTime    @default(now()) @db.Timestamp(0)
-  session   UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  visitor   Visitor     @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+model AccountActivity {
+  id        BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
+  sessionId BigInt         @db.UnsignedBigInt
+  visitorId BigInt         @db.UnsignedBigInt
+  publicId  String         @unique @db.VarChar(16)
+  event     String         @db.VarChar(100)
+  createdAt DateTime       @default(now()) @db.Timestamp(0)
+  session   AccountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitor   Visitor        @relation(fields: [visitorId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([visitorId])
