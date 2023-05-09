@@ -13,7 +13,7 @@ export class VerificationService {
 
 
   public async createEmailVerification(email: string) {
-    const existUser = await this.prisma.user.findUnique({
+    const existAccount = await this.prisma.account.findUnique({
       where: {
         email: email
       },
@@ -21,7 +21,7 @@ export class VerificationService {
         id: true
       }
     });
-    if (existUser) throw new ConflictException("Email is taken");
+    if (existAccount) throw new ConflictException("Email is taken");
     const randomDigit = randomInt(100_000, 999_999);
     const verification = await this.prisma.oTPVerification.create({
       data: {

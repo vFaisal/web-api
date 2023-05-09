@@ -1,30 +1,30 @@
-import {Global, INestApplication, Injectable, OnModuleInit} from "@nestjs/common";
-import {ConfigService} from "@nestjs/config";
-import {PrismaClient, User} from "@prisma/client";
+import { Global, INestApplication, Injectable, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { PrismaClient } from "@prisma/client";
 
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
-    constructor(private config: ConfigService) {
-        super({
-            log: ['query', 'info', 'warn', 'error'],
-            errorFormat: "pretty",
-            datasources: {
-                db: {
-                    url: config.get("DATABASE_DEVELOPMENT_URL")
-                }
-            }
-        });
-    }
+  constructor(private config: ConfigService) {
+    super({
+      log: ["query", "info", "warn", "error"],
+      errorFormat: "pretty",
+      datasources: {
+        db: {
+          url: config.get("DATABASE_DEVELOPMENT_URL")
+        }
+      }
+    });
+  }
 
-    async onModuleInit() {
-        await this.$connect();
-        this.$queryRaw`SET @@boost_cached_queries = true`
-    }
+  async onModuleInit() {
+    await this.$connect();
+    this.$queryRaw`SET @@boost_cached_queries = true`;
+  }
 
-    async enableShutdownHooks(app: INestApplication) {
-        this.$on('beforeExit', async () => {
-            await app.close();
-        });
-    }
+  async enableShutdownHooks(app: INestApplication) {
+    this.$on("beforeExit", async () => {
+      await app.close();
+    });
+  }
 }

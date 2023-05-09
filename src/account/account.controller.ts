@@ -2,6 +2,7 @@ import { AccountService } from "./account.service";
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthGuard } from "../auth/auth.guard";
 import { Request } from "express";
+import SessionEntity from "../auth/entities/session.entity";
 
 @Controller({
   path: "account",
@@ -15,6 +16,7 @@ export class AccountController {
   @UseGuards(AuthGuard)
   @HttpCode(200)
   getAccount(@Req() request) {
-    return this.accountService.getAccount(request.accountPublicId);
+    const session: SessionEntity = request.session;
+    return this.accountService.getAccount(session.accountPublicId);
   }
 }

@@ -66,6 +66,7 @@ model AccountSessionTokens {
   sessionId BigInt   @db.UnsignedBigInt
   visitorId BigInt   @unique @db.UnsignedBigInt
   token     String   @unique @db.VarChar(32)
+  ref       String?  @unique @db.VarChar(32)
   expires   DateTime @db.Timestamp(0)
   createdAt DateTime @default(now()) @db.Timestamp(0)
 
@@ -91,11 +92,11 @@ model Visitor {
   id                   BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
   publicId             String                @unique @db.VarChar(16)
   userAgent            String                @db.VarChar(200)
-  ipAddress            Int                   @db.UnsignedInt
-  counterCode          String                @db.Char(2)
-  region               String                @db.VarChar(100)
-  city                 String                @db.VarChar(100)
-  isp                  String                @db.VarChar(100)
+  ipAddress            String                @db.VarChar(128)
+  counterCode          String?               @db.Char(2)
+  region               String?               @db.VarChar(100)
+  city                 String?               @db.VarChar(100)
+  isp                  String?               @db.VarChar(100)
   createdAt            DateTime              @default(now()) @db.Timestamp(0)
   accountActivity      AccountActivity[]
   accountSessionTokens AccountSessionTokens?

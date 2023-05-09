@@ -7,7 +7,7 @@ export class AccountService {
   }
 
   public async getAccount(publicId: string) {
-    return this.prisma.user.findUnique({
+    return this.prisma.account.findUnique({
       where: {
         publicId: publicId
       },

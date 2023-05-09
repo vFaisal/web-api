@@ -16,6 +16,9 @@ import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+
+  private logger: Logger = new Logger("AuthGuard");
+
   constructor(private jwtService: JwtService, private prisma: PrismaService, private config: ConfigService, @Inject(CACHE_MANAGER) private cache: Cache) {
   }
 
@@ -26,7 +29,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
 
 
-    await this.jwtService.verifyAsync(
+    const payload = await this.jwtService.verifyAsync(
       token,
       {
         secret: this.config.get("JWT_256_SECRET"),
@@ -34,16 +37,16 @@ export class AuthGuard implements CanActivate {
 
       }
     ).catch((err) => {
-      Logger.debug(err);
+      this.logger.debug("Auth Guard", err);
       throw new UnauthorizedException();
     });
 
     //Check the session is valid in cache (We add await if we want to use cache service like redis);
-    const session = new SessionEntity(await this.cache.get(`session:${token}`));
-    console.log(session);
+    const session = new SessionEntity(await this.cache.get(`session:${payload.sid}`));
     if (!session.isValid()) throw new UnauthorizedException();
 
-    request["accountPublicId"] = session.accountPublicId;
+    request.session = session;
+
 
     return true;
   }
