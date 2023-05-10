@@ -20,8 +20,8 @@ export class AuthService {
 
   private logger: Logger = new Logger("AuthService");
   private static readonly EXPIRATION = {
-    ACCESS_TOKEN: 60 * 60, // 1h
-    REFRESH_TOKEN: 60 * 60 * 24 * 14 // 14 Days
+    ACCESS_TOKEN: 60 * 60, // 1h (Seconds)
+    REFRESH_TOKEN: 60 * 60 * 24 * 14 // 14 Days (Seconds)
   };
 
   constructor(private jwtService: JwtService, private prisma: PrismaService, private jwt: JwtService, private config: ConfigService, @Inject(CACHE_MANAGER) private cache: Cache) {
@@ -71,7 +71,7 @@ export class AuthService {
       rid: jwtPayload.rid,
       createdTimestampAt: unixTimestamp(),
       revokedTimestampAt: null
-    }, 3600 * 1000 /* 1 hour same the access token expiration */);
+    }, AuthService.EXPIRATION.ACCESS_TOKEN * 1000 /* 1 hour same the access token expiration */);
   }
 
 

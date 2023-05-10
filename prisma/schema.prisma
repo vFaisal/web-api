@@ -65,8 +65,8 @@ model AccountSessionTokens {
   id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   sessionId BigInt   @db.UnsignedBigInt
   visitorId BigInt   @unique @db.UnsignedBigInt
-  token     String   @unique @db.VarChar(32)
-  ref       String?  @unique @db.VarChar(32)
+  token     String   @unique @db.VarChar(100)
+  ref       String?  @unique @db.VarChar(100)
   expires   DateTime @db.Timestamp(0)
   createdAt DateTime @default(now()) @db.Timestamp(0)
 
