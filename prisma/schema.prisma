@@ -9,36 +9,17 @@ datasource db {
 }
 
 model Account {
-  id             BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  publicId       String   @unique @db.VarChar(16)
-  displayName    String?  @db.VarChar(100)
-  email          String   @unique @db.VarChar(320)
-  passwordHash   String?  @db.Text
-  verificationId BigInt   @unique @db.UnsignedBigInt
-  updatedAt      DateTime @updatedAt @db.Timestamp(0)
-  createdAt      DateTime @default(now()) @db.Timestamp(0)
-
-  verification OTPVerification @relation(fields: [verificationId], references: [id])
+  id              BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId        String   @unique @db.VarChar(16)
+  displayName     String?  @db.VarChar(100)
+  email           String   @unique @db.VarChar(320)
+  passwordHash    String?  @db.Text
+  emailVerifiedAt DateTime @updatedAt @db.Timestamp(0)
+  updatedAt       DateTime @updatedAt @db.Timestamp(0)
+  createdAt       DateTime @default(now()) @db.Timestamp(0)
 
   sessions            AccountSession[]
   federatedIdentities AccountFederatedIdentities[]
-}
-
-model OTPVerification {
-  id              BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
-  phoneOrEmail    String                @db.VarChar(320)
-  type            OPTVerificationType
-  signature       String                @unique @db.VarChar(128)
-  hashCode        String                @db.Text
-  attempts        Int                   @default(0) @db.UnsignedTinyInt
-  allowedAttempts Int                   @default(10) @db.UnsignedTinyInt
-  intent          OPTVerificationIntent
-  expires         DateTime              @db.Timestamp(0)
-  verifiedAt      DateTime?             @db.Timestamp(0)
-  createdAt       DateTime              @default(now()) @db.Timestamp(0)
-  account         Account?
-
-  @@index([phoneOrEmail])
 }
 
 enum SessionType {
@@ -77,15 +58,16 @@ model AccountSessionTokens {
 }
 
 model AccountFederatedIdentities {
-  id                BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  accountId         BigInt   @db.UnsignedBigInt
-  provider          Provider
-  providerAccountId String   @db.VarChar(100)
-  createdAt         DateTime @default(now()) @db.Timestamp(0)
-  account           Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  appAccountId BigInt   @db.UnsignedBigInt
+  provider     Provider
+  accountId    String   @db.VarChar(100)
+  email        String   @db.VarChar(320)
+  createdAt    DateTime @default(now()) @db.Timestamp(0)
+  account      Account  @relation(fields: [appAccountId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, providerAccountId])
-  @@index([accountId])
+  @@unique([provider, accountId])
+  @@index([appAccountId])
 }
 
 model Visitor {
@@ -114,15 +96,6 @@ model AccountActivity {
 
   @@index([sessionId])
   @@index([visitorId])
-}
-
-enum OPTVerificationIntent {
-  REGISTRATION
-}
-
-enum OPTVerificationType {
-  EMAIL
-  PHONE
 }
 
 enum Provider {
