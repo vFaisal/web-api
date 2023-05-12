@@ -1,4 +1,5 @@
-import { CacheModule, Global, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { Global, MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
+import { CacheModule } from "@nestjs/cache-manager";
 import { AccountModule } from "./account/account.module";
 import { AuthModule } from "./auth/auth.module";
 import { ConfigModule } from "@nestjs/config";
