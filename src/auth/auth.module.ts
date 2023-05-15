@@ -4,6 +4,7 @@ import { AuthController } from "./auth.controller";
 import { JwtModule } from "@nestjs/jwt";
 import { FederatedIdentitiesModule } from "./federated-identities/federated-identities.module";
 
+
 @Module({
   controllers: [AuthController],
   providers: [AuthService],

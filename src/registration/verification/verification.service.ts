@@ -2,17 +2,14 @@ import {
   BadRequestException, CACHE_MANAGER,
   ConflictException,
   HttpException, HttpStatus, Inject,
-  Injectable,
-  ServiceUnavailableException
+  Injectable
 } from "@nestjs/common";
 import { PrismaService } from "../../prisma.service";
 import { generateNanoId, unixTimestamp } from "../../utils/util";
 import { randomInt } from "crypto";
 import { hash, verify, argon2id } from "argon2";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { Cache } from "cache-manager";
 import OneTimePasswordEntity from "./entities/one-time-password.entity";
-import { OneTimePasswordVerificationIntent, OneTimePasswordVerificationTarget } from "@prisma/client";
 
 @Injectable()
 export class VerificationService {
@@ -34,7 +31,7 @@ export class VerificationService {
       }
     });
     if (existAccount) throw new ConflictException({
-      code: "email_taken",
+      code: "email_already_registered",
       message: "Email address is already associated with an existing account. Please login or use a different email address to create a new account."
     });
     const randomDigit = randomInt(100_000, 999_999);
@@ -62,12 +59,7 @@ export class VerificationService {
   public async verifyEmail({ email, signature, code }: { email: string, signature: string, code: number }) {
     let oneTimePassword = new OneTimePasswordEntity<"GET">(await this.cache.get(`otp:${signature}`));
 
-
-    console.log(oneTimePassword);
-    console.log("is verified", oneTimePassword.isVerified());
-    console.log("is isValid", oneTimePassword.isValid());
-
-    if (!oneTimePassword || !oneTimePassword.isValid() || oneTimePassword.isVerified() || oneTimePassword.phoneOrEmail !== email || oneTimePassword.target !== "EMAIL") throw new BadRequestException({
+    if (!oneTimePassword.isValid() || oneTimePassword.isVerified() || oneTimePassword.phoneOrEmail !== email || oneTimePassword.target !== "EMAIL") throw new BadRequestException({
       code: "invalid_signature",
       message: "Access denied due to invalid signature. Please check your signature and try again."
     });

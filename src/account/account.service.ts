@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
+import { AccountEntity } from "./entities/account.entity";
 
 @Injectable()
 export class AccountService {
@@ -7,17 +8,11 @@ export class AccountService {
   }
 
   public async getAccount(publicId: string) {
-    return this.prisma.account.findUnique({
+    return new AccountEntity(await this.prisma.account.findUnique({
       where: {
         publicId: publicId
-      },
-      select: {
-        publicId: true,
-        displayName: true,
-        email: true,
-        createdAt: true
       }
-    });
+    }));
   }
 
 }

@@ -15,6 +15,8 @@ import { AuthService } from "../auth/auth.service";
 import { SessionType } from "@prisma/client";
 import { Cache } from "cache-manager";
 import OneTimePasswordEntity from "./verification/entities/one-time-password.entity";
+import { serialize } from "class-transformer";
+import { AccountEntity } from "../account/entities/account.entity";
 
 @Injectable()
 export class RegistrationService {
@@ -24,10 +26,8 @@ export class RegistrationService {
 
   public async createAccount(params: RegistrationDto, significantRequestInformation: SignificantRequestInformation) {
     const verification = new OneTimePasswordEntity<"GET">(await this.cache.get(`otp:${params.signature}`));
-    console.log(verification);
-    console.log("is verified:", verification.isVerified());
 
-    if (!verification || !verification.isValid() || verification.intent !== "REGISTRATION" || verification.target !== "EMAIL" || verification.phoneOrEmail !== params.email) throw new BadRequestException({
+    if (!verification.isValid() || verification.intent !== "REGISTRATION" || verification.target !== "EMAIL" || verification.phoneOrEmail !== params.email) throw new BadRequestException({
       code: "invalid_signature",
       message: "Access denied due to invalid signature. Please check your signature and try again."
     });
@@ -48,19 +48,14 @@ export class RegistrationService {
       }
     }).catch((err: PrismaClientKnownRequestError) => {
       if (err.code == "P2002") throw new ConflictException({
-        code: "email_taken",
+        code: "email_already_registered",
         message: "Email address is already associated with an existing account. Please login or use a different email address to create a new account."
       });
       throw new ServiceUnavailableException();
     });
 
     return {
-      account: {
-        id: account.publicId,
-        email: account.email,
-        displayName: account.displayName,
-        createdAt: account.createdAt
-      },
+      account: new AccountEntity(account),
       credentials: await this.authService.createCredentials(account, significantRequestInformation, SessionType.EMAIL)
     };
   }

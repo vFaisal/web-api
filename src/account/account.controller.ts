@@ -1,7 +1,12 @@
 import { AccountService } from "./account.service";
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  HttpCode,
+  Req,
+  UseGuards
+} from "@nestjs/common";
 import { AuthGuard } from "../auth/auth.guard";
-import { Request } from "express";
 import SessionEntity from "../auth/entities/session.entity";
 
 @Controller({
