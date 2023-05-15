@@ -6,9 +6,9 @@ import {
   Logger,
   ServiceUnavailableException, UnprocessableEntityException
 } from "@nestjs/common";
-import { Request } from "express";
 import { ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
+import { FastifyRequest } from "fastify";
 
 
 @Injectable()
@@ -50,7 +50,7 @@ export default class RecaptchaGuard implements CanActivate {
     throw new BadRequestException("The reCAPTCHA score for your request is too low");
   }
 
-  private extractTokenFromHeader(request: Request): string | null {
+  private extractTokenFromHeader(request: FastifyRequest): string | null {
     const token = request.headers["X-Recaptcha-Token"];
     return typeof token === "string" && token.length > 1000 ? token : null;
   }

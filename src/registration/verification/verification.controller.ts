@@ -2,8 +2,8 @@ import { Body, Controller, HttpCode, HttpStatus, Patch, Post, Put, UseGuards } f
 import { VerificationService } from "./verification.service";
 import CreateEmailVerificationDto from "./dto/create-email-verification.dto";
 import VerifyEmailDto from "./dto/verify-email.dto";
-import { RecaptchaAction } from "../../recaptcha/recaptch.decorator";
-import RecaptchaGuard from "../../recaptcha/recaptcha.guard";
+import { RecaptchaAction } from "../../security/recaptch.decorator";
+import RecaptchaGuard from "../../security/recaptcha.guard";
 
 @Controller({
   path: "registration/verification",

@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Post, Put, Req, UseGuards } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import AuthenticateDto from "./dto/authenticate.dto";
-import RecaptchaGuard from "../recaptcha/recaptcha.guard";
-import { RecaptchaAction } from "../recaptcha/recaptch.decorator";
+import RecaptchaGuard from "../security/recaptcha.guard";
+import { RecaptchaAction } from "../security/recaptch.decorator";
 import { Request } from "express";
 import { significantRequestInformation } from "../utils/util";
 import RefreshTokenDto from "./dto/refresh-token.dto";
