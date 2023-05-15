@@ -1,12 +1,12 @@
-import { Module } from "@nestjs/common";
+import { forwardRef, Module } from "@nestjs/common";
 import { GoogleService } from "./google.service";
 import { GoogleController } from "./google.controller";
-import { AuthModule } from "../../auth.module";
+import { FederatedIdentitiesModule } from "../federated-identities.module";
 
 @Module({
   controllers: [GoogleController],
   providers: [GoogleService],
-  imports: [AuthModule]
+  imports: [forwardRef(() => FederatedIdentitiesModule)]
 })
 export class GoogleModule {
 }

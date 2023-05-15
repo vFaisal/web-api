@@ -2,6 +2,9 @@ import { BadRequestException, Injectable, Logger, ServiceUnavailableException } 
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import { AuthService } from "../../auth.service";
+import { FederatedIdentitiesService } from "../federated-identities.service";
+import { Provider } from "@prisma/client";
+import { SignificantRequestInformation, significantRequestInformation } from "../../../utils/util";
 
 @Injectable()
 export class GoogleService {
@@ -12,18 +15,17 @@ export class GoogleService {
 
   private readonly logger: Logger = new Logger("GoogleService");
 
-  constructor(private config: ConfigService, private jwt: JwtService, private auth: AuthService) {
+  constructor(private config: ConfigService, private jwt: JwtService, private federatedIdentitiesService: FederatedIdentitiesService) {
   }
 
 
-  public async authenticate(code: string, state: string) {
-    //Check state here//
+  public async authenticate(code: string, significantRequestInformation: SignificantRequestInformation) {
 
     //exchange code here//
     const auth = await this.exchangeAuthorizationCode(code);
-  }
 
-  //https://accounts.google.com/o/oauth2/v2/auth?client_id=399135010719-2d1umsfta62ocr6jnahbe6186rvu13m0.apps.googleusercontent.com&response_type=code&scope=https://www.googleapis.com/auth/userinfo.profile%20https://www.googleapis.com/auth/userinfo.email&redirect_uri=https://api.faisal.gg/v1/auth/federated-identities/google/callback
+    return this.federatedIdentitiesService.authenticate(auth.userInfo.email, auth.userInfo.sub, Provider.GOOGLE, auth.userInfo.picture, significantRequestInformation);
+  }
 
   public getUserInfoByDecoding(token: string): any {
     return this.jwt.decode(token);
@@ -75,11 +77,11 @@ export class GoogleService {
 
   }
 
-  public redirectAuthEndpointUrl() {
+  public redirectAuthEndpointUrl(state: string) {
     const params = new URLSearchParams({
       client_id: this.config.get("GOOGLE_CLIENT_ID"),
       response_type: "code",
-      state: "ds",
+      state: state,
       scope: GoogleService.APPLICATION_SCOPES.join(" "),
       access_type: "offline",
       include_granted_scopes: "true",

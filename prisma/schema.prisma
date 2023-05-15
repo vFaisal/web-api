@@ -58,16 +58,16 @@ model AccountSessionTokens {
 }
 
 model AccountFederatedIdentities {
-  id           BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  appAccountId BigInt   @db.UnsignedBigInt
-  provider     Provider
-  accountId    String   @db.VarChar(100)
-  email        String   @db.VarChar(320)
-  createdAt    DateTime @default(now()) @db.Timestamp(0)
-  account      Account  @relation(fields: [appAccountId], references: [id], onDelete: Cascade)
+  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  accountId BigInt   @db.UnsignedBigInt
+  provider  Provider
+  userId    String   @db.VarChar(100)
+  email     String   @db.VarChar(320)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
-  @@unique([provider, accountId])
-  @@index([appAccountId])
+  @@unique([provider, userId])
+  @@index([accountId])
 }
 
 model Visitor {
