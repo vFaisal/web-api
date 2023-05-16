@@ -11,7 +11,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       errorFormat: "pretty",
       datasources: {
         db: {
-          url: config.get("DATABASE_DEVELOPMENT_URL")
+          url: config.getOrThrow("DATABASE_DEVELOPMENT_URL")
         }
       }
     });

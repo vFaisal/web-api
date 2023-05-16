@@ -32,7 +32,7 @@ export class AuthGuard implements CanActivate {
     const payload = await this.jwtService.verifyAsync(
       token,
       {
-        secret: this.config.get("JWT_256_SECRET"),
+        secret: this.config.getOrThrow("JWT_256_SECRET"),
         algorithms: ["HS256"]
 
       }

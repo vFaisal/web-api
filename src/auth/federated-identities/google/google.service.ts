@@ -38,8 +38,8 @@ export class GoogleService {
         "content-type": "application/x-www-form-urlencoded"
       },
       body: new URLSearchParams({
-        client_id: this.config.get("GOOGLE_CLIENT_ID"),
-        client_secret: this.config.get("GOOGLE_CLIENT_SECRET"),
+        client_id: this.config.getOrThrow("GOOGLE_CLIENT_ID"),
+        client_secret: this.config.getOrThrow("GOOGLE_CLIENT_SECRET"),
         code: code,
         grant_type: "authorization_code",
         redirect_uri: GoogleService.REDIRECT_URI
@@ -79,7 +79,7 @@ export class GoogleService {
 
   public redirectAuthEndpointUrl(state: string) {
     const params = new URLSearchParams({
-      client_id: this.config.get("GOOGLE_CLIENT_ID"),
+      client_id: this.config.getOrThrow("GOOGLE_CLIENT_ID"),
       response_type: "code",
       state: state,
       scope: GoogleService.APPLICATION_SCOPES.join(" "),

@@ -1,10 +1,8 @@
 import {
   BadRequestException,
   CACHE_MANAGER,
-  CacheStore,
   Inject,
-  Injectable, Logger, ServiceUnavailableException,
-  UnauthorizedException
+  Injectable, Logger, ServiceUnavailableException
 } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
 import { JwtService } from "@nestjs/jwt";
@@ -35,7 +33,10 @@ export class AuthService {
     });
     if (!user) throw new BadRequestException("Email address not registered yet");
 
-    const isVerifiedPassword = await verify(user.passwordHash, password);
+    const isVerifiedPassword = await verify(user.passwordHash, password, {
+      version: argon2id
+
+    });
     if (!isVerifiedPassword) throw new BadRequestException("The credentials are invalid");
 
     return this.createCredentials(user, significantRequestInformation, SessionType.EMAIL);
@@ -52,12 +53,12 @@ export class AuthService {
       accessToken: await this.jwt.signAsync(payload, {
         expiresIn: AuthService.EXPIRATION.ACCESS_TOKEN, // 1 hour
         algorithm: "HS256",
-        secret: this.config.get("JWT_256_SECRET")
+        secret: this.config.getOrThrow("JWT_256_SECRET")
       }),
       refreshToken: await this.jwt.signAsync(payload, {
         expiresIn: AuthService.EXPIRATION.REFRESH_TOKEN, // 2 week
         algorithm: "HS512",
-        secret: this.config.get("JWT_512_SECRET")
+        secret: this.config.getOrThrow("JWT_512_SECRET")
       }),
       payload: payload
     };
@@ -117,7 +118,7 @@ export class AuthService {
     const payload = await this.jwtService.verifyAsync(
       token,
       {
-        secret: this.config.get("JWT_512_SECRET"),
+        secret: this.config.getOrThrow("JWT_512_SECRET"),
         algorithms: ["HS512"]
 
       }
