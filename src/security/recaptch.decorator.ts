@@ -1,3 +1,10 @@
-import {SetMetadata} from '@nestjs/common';
+import { applyDecorators, SetMetadata, UseGuards } from "@nestjs/common";
+import RecaptchaGuard from "./recaptcha.guard";
 
-export const RecaptchaAction = (action: string) => SetMetadata('recaptchaAction', action);
+
+export function Recaptcha(action: string) {
+  return applyDecorators(
+    SetMetadata("recaptchaAction", action),
+    UseGuards(RecaptchaGuard)
+  );
+}

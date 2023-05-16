@@ -2,8 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Patch, Post, Put, UseGuards } f
 import { VerificationService } from "./verification.service";
 import CreateEmailVerificationDto from "./dto/create-email-verification.dto";
 import VerifyEmailDto from "./dto/verify-email.dto";
-import { RecaptchaAction } from "../../security/recaptch.decorator";
-import RecaptchaGuard from "../../security/recaptcha.guard";
+import { Recaptcha } from "../../security/recaptch.decorator";
 
 @Controller({
   path: "registration/verification",
@@ -16,8 +15,7 @@ export class VerificationController {
 
   @Post("/email")
   @HttpCode(HttpStatus.CREATED)
-  @RecaptchaAction("registration")
-  @UseGuards(RecaptchaGuard)
+  @Recaptcha("registration")
   root(@Body() body: CreateEmailVerificationDto) {
     return this.verificationService.createEmailVerification(body.email);
   }
