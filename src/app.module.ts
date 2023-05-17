@@ -5,8 +5,8 @@ import { AuthModule } from "./auth/auth.module";
 import { ConfigModule } from "@nestjs/config";
 import { PrismaService } from "./prisma.service";
 import { RegistrationModule } from "./registration/registration.module";
-import { LoggerMiddleware } from "./middleware/logger.middleware";
 import { JwtModule } from "@nestjs/jwt";
+import { ThrottlerModule } from "./throttler/throttler.module";
 import SecurityModule from "./security/security.module";
 
 @Global()
@@ -18,14 +18,14 @@ import SecurityModule from "./security/security.module";
   }),
     JwtModule.register({
       global: true
-    }), SecurityModule, AccountModule, AuthModule, RegistrationModule, AuthModule],
+    }), SecurityModule, AccountModule, AuthModule, RegistrationModule, AuthModule, ThrottlerModule],
   controllers: [],
   providers: [PrismaService],
   exports: [PrismaService]
 
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
+export class AppModule /*implements NestModule*/ {
+  /*configure(consumer: MiddlewareConsumer) {
     consumer.apply(LoggerMiddleware).forRoutes("*");
-  }
+  }*/
 }
