@@ -6,7 +6,6 @@ import { ConfigModule } from "@nestjs/config";
 import { PrismaService } from "./prisma.service";
 import { RegistrationModule } from "./registration/registration.module";
 import { JwtModule } from "@nestjs/jwt";
-import { ThrottlerModule } from "./throttler/throttler.module";
 import SecurityModule from "./security/security.module";
 
 @Global()
@@ -18,7 +17,7 @@ import SecurityModule from "./security/security.module";
   }),
     JwtModule.register({
       global: true
-    }), SecurityModule, AccountModule, AuthModule, RegistrationModule, AuthModule, ThrottlerModule],
+    }), SecurityModule, AccountModule, AuthModule, RegistrationModule, AuthModule/*, ThrottlerModule*/],
   controllers: [],
   providers: [PrismaService],
   exports: [PrismaService]
