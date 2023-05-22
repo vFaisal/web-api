@@ -2,7 +2,6 @@
   "name": "nest-typescript-starter",
   "private": true,
   "version": "1.0.0",
-  "description": "Nest TypeScript starter repository",
   "license": "MIT",
   "scripts": {
     "build": "nest build",
@@ -62,6 +61,10 @@
     "ts-node": "^10.8.2",
     "tsconfig-paths": "^4.0.0",
     "typescript": "^5.0.4"
+  },
+  "engines": {
+    "node": "18.x",
+    "npm": "7.x"
   },
   "jest": {
     "moduleFileExtensions": [
