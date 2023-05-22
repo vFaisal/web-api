@@ -25,5 +25,5 @@ import * as process from "process";
     defaultVersion: VERSION_NEUTRAL
   });
   await app.get(PrismaService).enableShutdownHooks(app);
-  await app.listen(process.env.PORT);
+  await app.listen(process.env.PORT, "0.0.0.0");
 })();
