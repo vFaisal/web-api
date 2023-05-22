@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "prebuild": "rimraf dist",
     "build": "nest build && echo $NODE_ENV",
     "format": "prettier --write \\\"src/**/*.ts\\\" \\\"test/**/*.ts\\\"",
     "start": "nest start",
@@ -64,8 +63,7 @@
     "typescript": "^5.0.4"
   },
   "engines": {
-    "node": "18.x",
-    "npm": "9.x"
+    "node": "18.x"
   },
   "jest": {
     "moduleFileExtensions": [
