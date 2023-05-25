@@ -8,7 +8,7 @@ import {
   Res
 } from "@nestjs/common";
 import { GoogleService } from "./google.service";
-import FederatedIdentityQuery from "../dto/federated-identity-query";
+import FederatedIdentityQueryDto from "../dto/federated-identity-query.dto";
 import CSRFService from "../../../security/csrf.service";
 import { significantRequestInformation } from "../../../utils/util";
 import { CsrfProtection } from "../../../security/csrf-protection.decorator";
@@ -34,7 +34,7 @@ export class GoogleController {
   @Get("callback")
   @HttpCode(HttpStatus.OK)
   @CsrfProtection("auth")
-  callback(@Query() query: FederatedIdentityQuery, @Req() req) {
+  callback(@Query() query: FederatedIdentityQueryDto, @Req() req) {
     return this.googleService.authenticate(query.code, significantRequestInformation(req));
   }
 }

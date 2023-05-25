@@ -6,7 +6,7 @@ export default class RegistrationDto {
   @Matches(Constants.EMAIL_VALIDATION_REGEX) // Email regex
   email: string;
 
-  @Matches(/^[a-z0-9]{128}$/i)
+  @Matches(/^[a-z0-9]{64}$/i)
   signature: string;
   @Matches(Constants.PASSWORD_VALIDATION_REGEX)
   password: string;

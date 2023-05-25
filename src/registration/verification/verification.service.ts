@@ -1,23 +1,25 @@
 import {
-  BadRequestException, CACHE_MANAGER,
+  BadRequestException,
   ConflictException,
-  HttpException, HttpStatus, Inject,
+  HttpException, HttpStatus,
   Injectable
 } from "@nestjs/common";
-import { PrismaService } from "../../prisma.service";
+import { PrismaService } from "../../providers/prisma.service";
 import { generateNanoId, unixTimestamp } from "../../utils/util";
 import { randomInt } from "crypto";
 import { hash, verify, argon2id } from "argon2";
-import { Cache } from "cache-manager";
 import OneTimePasswordEntity from "./entities/one-time-password.entity";
+import RedisService from "../../providers/redis.service";
+import { RegistrationService } from "../registration.service";
+import RegistrationEntity from "../entities/registration.entity";
 
 @Injectable()
 export class VerificationService {
 
-  private static readonly ONE_TIME_PASSWORD_EXPIRATION_MS = 60 * 15 * 1000;
-  private static readonly ONE_TIME_PASSWORD_VERIFIED_EXPIRATION_MS = 60 * 60 * 1000;
+  private static readonly ONE_TIME_PASSWORD_EXPIRATION = 60 * 15;
+  private static readonly DEFAULT_ALLOWED_ATTEMPTS = 10;
 
-  constructor(private prisma: PrismaService, @Inject(CACHE_MANAGER) private cache: Cache) {
+  constructor(private prisma: PrismaService, private kv: RedisService) {
   }
 
 
@@ -35,9 +37,10 @@ export class VerificationService {
       message: "Email address is already associated with an existing account. Please login or use a different email address to create a new account."
     });
     const randomDigit = randomInt(100_000, 999_999);
-    const signature = generateNanoId(128);
+    const signature = generateNanoId(64);
 
-    await this.cache.set(`otp:${signature}`, new OneTimePasswordEntity<"CREATION">({
+
+    await this.kv.setex(`otp:${signature}`, VerificationService.ONE_TIME_PASSWORD_EXPIRATION, new OneTimePasswordEntity<"CREATION">({
       phoneOrEmail: email,
       target: "EMAIL",
       intent: "REGISTRATION",
@@ -46,9 +49,8 @@ export class VerificationService {
         version: argon2id
       }),
       attempts: 0,
-      allowedAttempts: 10,
       createdTimestampAt: unixTimestamp()
-    }), VerificationService.ONE_TIME_PASSWORD_EXPIRATION_MS);
+    }));
 
     console.log("Verification Code: ", randomDigit);
     return {
@@ -57,14 +59,14 @@ export class VerificationService {
   }
 
   public async verifyEmail({ email, signature, code }: { email: string, signature: string, code: number }) {
-    let oneTimePassword = new OneTimePasswordEntity<"GET">(await this.cache.get(`otp:${signature}`));
+    let oneTimePassword = new OneTimePasswordEntity<"GET">(await this.kv.get(`otp:${signature}`));
 
-    if (!oneTimePassword.isValid() || oneTimePassword.isVerified() || oneTimePassword.phoneOrEmail !== email || oneTimePassword.target !== "EMAIL") throw new BadRequestException({
+    if (!oneTimePassword.isValid() || oneTimePassword.phoneOrEmail !== email || oneTimePassword.target !== "EMAIL") throw new BadRequestException({
       code: "invalid_signature",
       message: "Access denied due to invalid signature. Please check your signature and try again."
     });
 
-    if (oneTimePassword.attempts >= 10) throw new HttpException({
+    if (oneTimePassword.attempts >= VerificationService.DEFAULT_ALLOWED_ATTEMPTS) throw new HttpException({
       code: "to_many_attempts",
       message: "You have made too many attempts to verify signature."
     }, HttpStatus.TOO_MANY_REQUESTS);
@@ -76,15 +78,21 @@ export class VerificationService {
     });
 
     if (!codeVerify) {
-      await this.cache.set(`otp:${signature}`, oneTimePassword, VerificationService.ONE_TIME_PASSWORD_EXPIRATION_MS - (Date.now() - oneTimePassword.createdTimestampAt * 1000));
+      await this.kv.setex(`otp:${signature}`, VerificationService.ONE_TIME_PASSWORD_EXPIRATION - (unixTimestamp() - oneTimePassword.createdTimestampAt), oneTimePassword);
       throw new BadRequestException({
         code: "incorrect_verification_code",
         message: "The verification code you entered is invalid. Please check and try again."
       });
     }
 
-    oneTimePassword.verify();
-    await this.cache.set(`otp:${signature}`, oneTimePassword, VerificationService.ONE_TIME_PASSWORD_VERIFIED_EXPIRATION_MS);
+    await this.kv.del(`otp:${signature}`);
+
+    await this.kv.setex(`registration:${signature}`, RegistrationService.SIGNATURE_REGISTRATION_EXPIRATION, new RegistrationEntity<"CREATION">({
+      phoneOrEmail: oneTimePassword.phoneOrEmail,
+      target: "EMAIL",
+      signature,
+      createdTimestampAt: unixTimestamp()
+    }));
 
   }
 

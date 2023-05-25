@@ -1,46 +1,42 @@
 import {
   BadRequestException,
-  CACHE_MANAGER,
   ConflictException,
-  Inject,
   Injectable,
   ServiceUnavailableException
 } from "@nestjs/common";
-import { PrismaService } from "../prisma.service";
+import { PrismaService } from "../providers/prisma.service";
 import RegistrationDto from "./dto/registration.dto";
 import { generateNanoId, SignificantRequestInformation } from "../utils/util";
 import { argon2id, hash } from "argon2";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { AuthService } from "../auth/auth.service";
 import { SessionType } from "@prisma/client";
-import { Cache } from "cache-manager";
 import OneTimePasswordEntity from "./verification/entities/one-time-password.entity";
-import { serialize } from "class-transformer";
 import { AccountEntity } from "../account/entities/account.entity";
+import RedisService from "../providers/redis.service";
+import RegistrationEntity from "./entities/registration.entity";
 
 @Injectable()
 export class RegistrationService {
 
-  constructor(private readonly prisma: PrismaService, private authService: AuthService, @Inject(CACHE_MANAGER) private cache: Cache) {
+  public static readonly SIGNATURE_REGISTRATION_EXPIRATION = 60 * 60;
+
+  constructor(private readonly prisma: PrismaService, private authService: AuthService, private kv: RedisService) {
   }
 
-  public async createAccount(params: RegistrationDto, significantRequestInformation: SignificantRequestInformation) {
-    const verification = new OneTimePasswordEntity<"GET">(await this.cache.get(`otp:${params.signature}`));
+  public async createAccountWithEmail(params: RegistrationDto, significantRequestInformation: SignificantRequestInformation) {
+    const registration = new RegistrationEntity<"GET">(await this.kv.get(`registration:${params.signature}`));
 
-    if (!verification.isValid() || verification.intent !== "REGISTRATION" || verification.target !== "EMAIL" || verification.phoneOrEmail !== params.email) throw new BadRequestException({
+    if (!registration.isValid() || registration.target !== "EMAIL" || registration.phoneOrEmail !== params.email) throw new BadRequestException({
       code: "invalid_signature",
       message: "Access denied due to invalid signature. Please check your signature and try again."
     });
 
-    if (!verification.isVerified()) throw new BadRequestException({
-      code: "unverified_signature",
-      message: "Access denied due to an unverified signature. Please verify your signature and try again."
-    });
-
+    await this.kv.del(`registration:${params.signature}`);
 
     const account = await this.prisma.account.create({
       data: {
-        email: verification.phoneOrEmail,
+        email: registration.phoneOrEmail,
         passwordHash: await hash(params.password, {
           version: argon2id
         }),

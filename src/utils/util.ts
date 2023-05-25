@@ -15,6 +15,10 @@ export function unixTimestamp(increment?: number, returnType: "DATE" | "unixTime
   return (returnType === "DATE") ? new Date(timestamp * 1000) : timestamp;
 }
 
+export function capitalize(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
 
 export type SignificantRequestInformation = {
   ipAddress: string,

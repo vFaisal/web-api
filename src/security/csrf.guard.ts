@@ -1,40 +1,35 @@
 import {
-  BadRequestException, CACHE_MANAGER,
+  BadRequestException,
   CanActivate,
-  ExecutionContext, Inject,
-  Injectable,
-  Logger,
-  ServiceUnavailableException, UnprocessableEntityException
+  ExecutionContext,
+  Injectable
 } from "@nestjs/common";
-import { Request } from "express";
-import { ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
-import { Cache } from "cache-manager";
 import { FastifyRequest } from "fastify";
+import RedisService from "../providers/redis.service";
 
 
 @Injectable()
 export default class CSRFGuard implements CanActivate {
-  constructor(@Inject(CACHE_MANAGER) private cache: Cache, private reflector: Reflector) {
+  constructor(private kv: RedisService, private reflector: Reflector) {
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
     const suffix = this.reflector.get<string>("csrfSuffix", context.getHandler());
-    if (!suffix) {
-      Logger.error("CSRF suffix decorator is required for CSRF protection");
-      throw new ServiceUnavailableException();
-    }
     const request = context.switchToHttp().getRequest();
 
     const token = this.extractTokenFromQuery(request);
     const signature = this.extractSignatureFromCookie(request, suffix);
+
+    console.log(token);
+    console.log(signature);
 
     if (!token || !signature) throw new BadRequestException({
       code: "csrf_required",
       message: "This endpoint requires a CSRF policy to be included in the request. Please provide a valid policy and try again."
     });
 
-    const csrf: { token: string, expires: number } | null = await this.cache.get(`csrf_${suffix}:${signature}`);
+    const csrf: { token: string, expires: number } | null = await this.kv.get(`csrf_${suffix}:${signature}`);
 
 
     if (!csrf || csrf.token !== token) throw new BadRequestException({
@@ -48,7 +43,7 @@ export default class CSRFGuard implements CanActivate {
 
   private extractTokenFromQuery(request: FastifyRequest): string | null {
     const token = request.query?.["state"];
-    return typeof token === "string" && token.length === 128 ? token : null;
+    return typeof token === "string" && token.length === 64 ? token : null;
   }
 
   private extractSignatureFromCookie(request: FastifyRequest, suffix: string): string | null {

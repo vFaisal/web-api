@@ -1,27 +1,25 @@
 import {
   BadRequestException,
-  CACHE_MANAGER,
   ConflictException,
-  forwardRef,
   Inject,
   Injectable,
   ServiceUnavailableException
 } from "@nestjs/common";
-import { PrismaService } from "../../prisma.service";
+import { PrismaService } from "../../providers/prisma.service";
 import { Provider, SessionType } from "@prisma/client";
-import { generateNanoId, SignificantRequestInformation, unixTimestamp } from "../../utils/util";
+import { capitalize, generateNanoId, SignificantRequestInformation, unixTimestamp } from "../../utils/util";
 import { AuthService } from "../auth.service";
-import { Cache } from "cache-manager";
 import FederatedIdentityRegistrationEntity from "./entities/federated-identity-registration.entity";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { AccountEntity } from "../../account/entities/account.entity";
+import RedisService from "../../providers/redis.service";
 
 @Injectable()
 export class FederatedIdentitiesService {
 
-  private static readonly REGISTRATION_SIGNATURE_EXPIRATION_MS = 60 * 15 * 1000; // 15 min
+  private static readonly REGISTRATION_SIGNATURE_EXPIRATION = 60 * 15; // 15 min
 
-  constructor(private prisma: PrismaService, private authService: AuthService, @Inject(CACHE_MANAGER) private cache: Cache) {
+  constructor(private prisma: PrismaService, private authService: AuthService, private kv: RedisService) {
   }
 
   public async authenticate(email: string, userId: string, provider: Provider, photoUrl: string, signatureRequestInformation: SignificantRequestInformation) {
@@ -54,33 +52,35 @@ export class FederatedIdentitiesService {
 
     if (account) throw new BadRequestException({
       code: "email_already_registered",
-      message: "The email provided is already registered with an existing account. Please use a different Google account or log in with your existing account by email and link your Google account to your account to able login using Google account."
+      message: `You cannot login or register using your ${capitalize(provider)} Account because the email address within it is already linked to another account registered with our service. Since there is no existing link between your ${capitalize(provider)} Account and the appropriate association, it is not possible to use that ${capitalize(provider)} Account for login or registration.`
     });
 
-    const signature = generateNanoId(128);
-    await this.cache.set(`federatedIdentityRegistration:${signature}`, new FederatedIdentityRegistrationEntity<"CREATION">({
+    const signature = generateNanoId(64);
+    await this.kv.setex(`federatedIdentityRegistration:${signature}`, FederatedIdentitiesService.REGISTRATION_SIGNATURE_EXPIRATION, new FederatedIdentityRegistrationEntity<"CREATION">({
       userId,
       provider,
       email,
       photoUrl,
       signature,
       createdTimestampAt: unixTimestamp()
-    }), FederatedIdentitiesService.REGISTRATION_SIGNATURE_EXPIRATION_MS);
+    }));
 
     return {
       auth: "REGISTRATION",
+      email: email,
       provider,
       signature
     };
   }
 
-  public async registration(signature: string, provider: Provider) {
-    const registration = new FederatedIdentityRegistrationEntity<"GET">(await this.cache.get(`federatedIdentityRegistration:${signature}`));
+  public async registration(signature: string, email: string, significantRequestInformation: SignificantRequestInformation) {
+    const registration = new FederatedIdentityRegistrationEntity<"GET">(await this.kv.get(`federatedIdentityRegistration:${signature}`));
 
-    if (!registration.isValid() || provider !== registration.provider) throw new BadRequestException({
+    if (!registration.isValid() || registration.email !== email) throw new BadRequestException({
       code: "invalid_signature",
       message: "Access denied due to invalid signature. Please check your signature and try again."
     });
+
 
     const account = await this.prisma.account.create({
       data: {
@@ -90,7 +90,7 @@ export class FederatedIdentitiesService {
           create: {
             email: registration.email,
             userId: registration.userId,
-            provider
+            provider: registration.provider
           }
         }
       },
@@ -100,13 +100,16 @@ export class FederatedIdentitiesService {
     }).catch((err: PrismaClientKnownRequestError) => {
       if (err.code == "P2002") throw new ConflictException({
         code: "email_already_registered",
-        message: "The email provided is already registered with an existing account. Please use a different Google account or log in with your existing account by email and link your Google account to your account to able login using Google account."
+        message: `You cannot login or register using your ${capitalize(registration.provider)} Account because the email address within it is already linked to another account registered with our service. Since there is no existing link between your ${capitalize(registration.provider)} Account and the appropriate association, it is not possible to use that ${capitalize(registration.provider)} Account for login or registration.`
       });
       throw new ServiceUnavailableException();
     });
 
 
-    return new AccountEntity(account, account.federatedIdentities);
+    return {
+      account: new AccountEntity(account, account.federatedIdentities),
+      credentials: await this.authService.createCredentials(account, significantRequestInformation, SessionType.FEDERATED_IDENTITY)
+    };
   }
 
 }

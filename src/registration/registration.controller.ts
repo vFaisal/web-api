@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Req, UseGuard
 import { RegistrationService } from "./registration.service";
 import RegistrationDto from "./dto/registration.dto";
 import { significantRequestInformation } from "../utils/util";
-import { Request } from "express";
+import { FastifyRequest } from "fastify";
 
 @Controller({
   path: "registration",
@@ -15,7 +15,7 @@ export class RegistrationController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  root(@Body() body: RegistrationDto, @Req() req: Request) {
-    return this.registrationService.createAccount(body, significantRequestInformation(req));
+  root(@Body() body: RegistrationDto, @Req() req: FastifyRequest) {
+    return this.registrationService.createAccountWithEmail(body, significantRequestInformation(req));
   }
 }

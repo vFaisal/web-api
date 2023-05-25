@@ -1,25 +1,23 @@
 import {
-  CACHE_MANAGER, CacheStore,
   CanActivate,
-  ExecutionContext, ForbiddenException, Inject,
+  ExecutionContext,
   Injectable,
   Logger,
   UnauthorizedException
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import * as process from "process";
 import { Request } from "express";
-import { PrismaService } from "../prisma.service";
+import { PrismaService } from "../providers/prisma.service";
 import SessionEntity from "./entities/session.entity";
-import { Cache } from "cache-manager";
 import { ConfigService } from "@nestjs/config";
+import RedisService from "../providers/redis.service";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
 
   private logger: Logger = new Logger("AuthGuard");
 
-  constructor(private jwtService: JwtService, private prisma: PrismaService, private config: ConfigService, @Inject(CACHE_MANAGER) private cache: Cache) {
+  constructor(private jwtService: JwtService, private prisma: PrismaService, private config: ConfigService, private kv: RedisService) {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -42,7 +40,7 @@ export class AuthGuard implements CanActivate {
     });
 
     //Check the session is valid in cache (We add await if we want to use cache service like redis);
-    const session = new SessionEntity(await this.cache.get(`session:${payload.sid}`));
+    const session = new SessionEntity(await this.kv.get(`session:${payload.sid}`));
     if (!session.isValid()) throw new UnauthorizedException();
 
     request.session = session;

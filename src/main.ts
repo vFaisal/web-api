@@ -2,7 +2,7 @@ import { NestFactory, Reflector } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ClassSerializerInterceptor, ValidationPipe, VERSION_NEUTRAL, VersioningType } from "@nestjs/common";
 import helmet from "helmet";
-import { PrismaService } from "./prisma.service";
+import { PrismaService } from "./providers/prisma.service";
 import fastifyCookie from "@fastify/cookie";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
 import * as process from "process";
@@ -24,6 +24,7 @@ import * as process from "process";
     type: VersioningType.URI,
     defaultVersion: VERSION_NEUTRAL
   });
+
   await app.get(PrismaService).enableShutdownHooks(app);
   await app.listen(process.env.PORT, "0.0.0.0");
 })();
