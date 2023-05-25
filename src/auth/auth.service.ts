@@ -1,17 +1,16 @@
 import {
   BadRequestException,
-  CACHE_MANAGER,
-  Inject,
   Injectable, Logger, ServiceUnavailableException
 } from "@nestjs/common";
-import { PrismaService } from "../prisma.service";
+import { PrismaService } from "../providers/prisma.service";
 import { JwtService } from "@nestjs/jwt";
 import { argon2id, verify } from "argon2";
 import { generateNanoId, SignificantRequestInformation, unixTimestamp } from "../utils/util";
 import { Account, SessionType } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
-import { Cache } from "cache-manager";
 import SessionEntity from "./entities/session.entity";
+import { FastifyReply, FastifyRequest } from "fastify";
+import RedisService from "../providers/redis.service";
 
 @Injectable()
 export class AuthService {
@@ -22,7 +21,7 @@ export class AuthService {
     REFRESH_TOKEN: 60 * 60 * 24 * 14 // 14 Days (Seconds)
   };
 
-  constructor(private jwtService: JwtService, private prisma: PrismaService, private jwt: JwtService, private config: ConfigService, @Inject(CACHE_MANAGER) private cache: Cache) {
+  constructor(private jwtService: JwtService, private prisma: PrismaService, private jwt: JwtService, private config: ConfigService, private kv: RedisService) {
   }
 
   public async authenticate(email: string, password: string, significantRequestInformation: SignificantRequestInformation) {
@@ -66,13 +65,13 @@ export class AuthService {
 
   private async addCredentialsToCache(jwtPayload: AppJWTPayload) {
     //Cache the access token for revocation (We add await if we want to use cache service like redis);
-    await this.cache.set(`session:${jwtPayload.sid}`, {
+    await this.kv.setex(`session:${jwtPayload.sid}`, AuthService.EXPIRATION.ACCESS_TOKEN /* 1 hour same the access token expiration */, {
       accountPublicId: jwtPayload.sub,
       sessionId: jwtPayload.sid,
       rid: jwtPayload.rid,
       createdTimestampAt: unixTimestamp(),
       revokedTimestampAt: null
-    }, AuthService.EXPIRATION.ACCESS_TOKEN * 1000 /* 1 hour same the access token expiration */);
+    });
   }
 
 
@@ -153,7 +152,7 @@ export class AuthService {
     });
     if (ref) throw new BadRequestException("Invalid refresh token", "This token has been used before");
 
-    await this.cache.del(`session:${payload.sid}`);
+    await this.kv.del(`session:${payload.sid}`);
 
     const jwt = await this.createJWT(tokenSession.session.account.publicId);
 
@@ -204,14 +203,14 @@ export class AuthService {
       }
     }).catch(async (err) => {
       if (err.code === "P2025") {
-        await this.cache.del(`session:${session.sessionId}`);
+        await this.kv.del(`session:${session.sessionId}`);
         throw new BadRequestException("Session not exist.");
       }
       console.log(err);
       throw new ServiceUnavailableException();
     });
 
-    await this.cache.del(`session:${session.sessionId}`);
+    await this.kv.del(`session:${session.sessionId}`);
 
 
   }
