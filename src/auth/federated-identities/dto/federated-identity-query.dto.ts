@@ -8,7 +8,7 @@ export default class FederatedIdentityQueryDto {
   code: string;
 
   @IsDefined()
-  @MinLength(1)
-  @MaxLength(64)
+  @MinLength(100)
+  @MaxLength(120)
   state: string;
 }

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@fastify/cookie": "^8.3.0",
+    "@fastify/csrf": "^6.2.0",
     "@fastify/helmet": "^10.1.1",
     "@nestjs/common": "9.4.0",
     "@nestjs/config": "^2.3.1",
