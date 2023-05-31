@@ -26,7 +26,7 @@ export default class CSRFService {
     const secretCsrfCookie = cookie ? req.cookies?.[`x_csrf_${suffix}`] : null;
     const tokenCsrfCookie = cookie ? req.cookies?.[`x_xsrf_${suffix}`] : null;
 
-    if (this.validateSecretLength(secretCsrfCookie) && this.validateTokenLength(tokenCsrfCookie) && this.dep.verify(secretCsrfCookie, tokenCsrfCookie)) return;
+    if (this.validateSecretLength(secretCsrfCookie) && this.validateTokenLength(tokenCsrfCookie) && this.dep.verify(secretCsrfCookie, tokenCsrfCookie)) return tokenCsrfCookie;
 
     const secret = this.dep.secretSync();
     const token = this.dep.create(secret);
