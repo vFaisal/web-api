@@ -19,10 +19,6 @@ export default class RecaptchaGuard implements CanActivate {
   public async canActivate(context: ExecutionContext): Promise<boolean> {
     return true;
     const action = this.reflector.get<string>("recaptchaAction", context.getHandler());
-    if (!action) {
-      Logger.error("action filed is required for Recaptcha");
-      throw new ServiceUnavailableException();
-    }
 
     const token = this.extractTokenFromHeader(context.switchToHttp().getRequest());
     if (!token) {

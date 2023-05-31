@@ -15,7 +15,7 @@ export class GoogleService {
 
   private readonly logger: Logger = new Logger("GoogleService");
 
-  constructor(private config: ConfigService, private jwt: JwtService, private federatedIdentitiesService: FederatedIdentitiesService) {
+  constructor(private config: ConfigService, private federatedIdentitiesService: FederatedIdentitiesService) {
   }
 
 
@@ -24,11 +24,14 @@ export class GoogleService {
     //exchange code here//
     const auth = await this.exchangeAuthorizationCode(code);
 
-    return this.federatedIdentitiesService.authenticate(auth.userInfo.email, auth.userInfo.sub, Provider.GOOGLE, auth.userInfo.picture, significantRequestInformation);
-  }
+    const userInfo = this.federatedIdentitiesService.getUserInfoByDecodingIdToken(auth.id_token);
 
-  public getUserInfoByDecoding(token: string): any {
-    return this.jwt.decode(token);
+    if (!userInfo?.email_verified) throw new BadRequestException({
+      code: "google_unverified_email",
+      message: "The user's Google account email address is not verified and cannot be used for authentication."
+    });
+
+    return this.federatedIdentitiesService.authenticate(userInfo.email, userInfo.sub, Provider.GOOGLE, userInfo.picture, userInfo.name, significantRequestInformation);
   }
 
   public async exchangeAuthorizationCode(code: string) {
@@ -63,21 +66,11 @@ export class GoogleService {
       message: "The requested scope is not valid or does not match the scopes configured for our application."
     });
 
-    const userInfo = this.getUserInfoByDecoding(data.id_token);
-
-    if (!userInfo?.email_verified) throw new BadRequestException({
-      code: "google_unverified_email",
-      message: "The user's Google account email address is not verified and cannot be used for authentication."
-    });
-
-    return {
-      ...data,
-      userInfo
-    };
+    return data;
 
   }
 
-  public redirectAuthEndpointUrl(state: string) {
+  public redirectAuthEndpointUrl(state: string, selectAccount = false) {
     const params = new URLSearchParams({
       client_id: this.config.getOrThrow("GOOGLE_CLIENT_ID"),
       response_type: "code",
@@ -85,6 +78,7 @@ export class GoogleService {
       scope: GoogleService.APPLICATION_SCOPES.join(" "),
       access_type: "offline",
       include_granted_scopes: "true",
+      prompt: selectAccount ? "select_account" : "none",
       redirect_uri: GoogleService.REDIRECT_URI
     });
     return GoogleService.AUTH_ENDPOINT + "?" + params.toString();

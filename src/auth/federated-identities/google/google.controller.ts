@@ -21,9 +21,6 @@ export class GoogleController {
   constructor(private readonly googleService: GoogleService, private readonly csrfService: CSRFService) {
   }
 
-  /*
-  https://api.faisal.gg/v1/auth/federated-identities/google/callback?state=1q7qvf5ccqyjpb8ehdidri6qjl9762vgt1uh7luywjke3ogzewldyv1qh8ahic77dx3w4vyl3b05lhdr33ekqekvceewxyrdl6zh6rc60qvivh4smogwhrvygqeyc7td&code=4%2F0AbUR2VM02aG4jqpXDLvFu7yFZMoxO0uUvstCXtaAdVkZAsfHOT_fZ2TWMsI8sHPo8vw-sQ&scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email&authuser=0&hd=faisal.gg&prompt=none
-   */
   @Get("")
   @HttpCode(HttpStatus.SEE_OTHER)
   async root(@Res() res, @Req() req) {

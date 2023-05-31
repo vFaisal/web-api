@@ -13,16 +13,21 @@ import FederatedIdentityRegistrationEntity from "./entities/federated-identity-r
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import { AccountEntity } from "../../account/entities/account.entity";
 import RedisService from "../../providers/redis.service";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class FederatedIdentitiesService {
 
   private static readonly REGISTRATION_SIGNATURE_EXPIRATION = 60 * 15; // 15 min
 
-  constructor(private prisma: PrismaService, private authService: AuthService, private kv: RedisService) {
+  constructor(private prisma: PrismaService, private authService: AuthService, private jwt: JwtService, private kv: RedisService) {
   }
 
-  public async authenticate(email: string, userId: string, provider: Provider, photoUrl: string, signatureRequestInformation: SignificantRequestInformation) {
+  public getUserInfoByDecodingIdToken(token: string): any {
+    return this.jwt.decode(token);
+  }
+
+  public async authenticate(email: string, userId: string, provider: Provider, photoUrl: string, displayName: string, signatureRequestInformation: SignificantRequestInformation) {
     const existAccount = await this.prisma.accountFederatedIdentities.findUnique({
       where: {
         provider_userId: {
@@ -60,16 +65,20 @@ export class FederatedIdentitiesService {
       userId,
       provider,
       email,
-      photoUrl,
       signature,
       createdTimestampAt: unixTimestamp()
     }));
-
+    
     return {
       auth: "REGISTRATION",
-      email: email,
       provider,
-      signature
+      signature,
+      user: {
+        email,
+        photo: photoUrl ?? null,
+        displayName: displayName ?? null
+      },
+      expires: unixTimestamp(FederatedIdentitiesService.REGISTRATION_SIGNATURE_EXPIRATION)
     };
   }
 
