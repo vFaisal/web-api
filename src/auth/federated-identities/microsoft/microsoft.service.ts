@@ -24,8 +24,6 @@ export class MicrosoftService {
     //exchange code here//
     const auth = await this.exchangeAuthorizationCode(code);
 
-    console.log(auth);
-
     const userInfo = this.federatedIdentitiesService.getUserInfoByDecodingIdToken(auth.id_token);
     const photo = await this.getProfilePhoto(auth.access_token);
 
@@ -53,7 +51,7 @@ export class MicrosoftService {
     const data = await res.json();
     if (!res.ok) {
       if (data.error === "invalid_grant") throw  new BadRequestException({
-        code: "google_invalid_grant",
+        code: "microsoft_invalid_grant",
         message: "The authorization code is invalid or has expired."
       });
       this.logger.error("unexpected response from oauth2 google api 'oauth2.googleapis.com/token'", data);

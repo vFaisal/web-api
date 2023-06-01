@@ -4,12 +4,15 @@ import { FederatedIdentitiesController } from "./federated-identities.controller
 import { GoogleModule } from "./google/google.module";
 import { AuthModule } from "../auth.module";
 import { AuthService } from "../auth.service";
-import { MicrosoftModule } from './microsoft/microsoft.module';
+import { MicrosoftModule } from "./microsoft/microsoft.module";
+import { FacebookModule } from "./facebook/facebook.module";
+import { GithubModule } from "./github/github.module";
+import { TwitterModule } from "./twitter/twitter.module";
 
 @Module({
   controllers: [FederatedIdentitiesController],
   providers: [FederatedIdentitiesService],
-  imports: [GoogleModule, forwardRef(() => AuthModule), MicrosoftModule],
+  imports: [GoogleModule, forwardRef(() => AuthModule), MicrosoftModule, GithubModule],
   exports: [FederatedIdentitiesService]
 })
 export class FederatedIdentitiesModule {

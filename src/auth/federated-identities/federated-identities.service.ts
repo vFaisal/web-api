@@ -41,7 +41,7 @@ export class FederatedIdentitiesService {
     });
     if (existAccount)
       return {
-        auth: "LOGIN",
+        auth: "login",
         provider,
         credentials: this.authService.createCredentials(existAccount.account, signatureRequestInformation, SessionType.FEDERATED_IDENTITY)
       };
@@ -68,16 +68,16 @@ export class FederatedIdentitiesService {
       signature,
       createdTimestampAt: unixTimestamp()
     }));
-    
+
     return {
-      auth: "REGISTRATION",
-      provider,
-      signature,
+      auth: "registration",
+      provider: provider.toLowerCase(),
       user: {
         email,
         photo: photoUrl ?? null,
         displayName: displayName ?? null
       },
+      signature,
       expires: unixTimestamp(FederatedIdentitiesService.REGISTRATION_SIGNATURE_EXPIRATION)
     };
   }
