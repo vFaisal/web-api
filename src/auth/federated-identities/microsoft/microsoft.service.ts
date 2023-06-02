@@ -14,7 +14,7 @@ export class MicrosoftService {
   private static readonly REDIRECT_URI = "https://api.faisal.gg/v1/auth/federated-identities/microsoft/callback";
   private static readonly API_BASE = "https://graph.microsoft.com/v1.0";
 
-  private readonly logger: Logger = new Logger("GoogleService");
+  private readonly logger: Logger = new Logger("MicrosoftService");
 
   constructor(private config: ConfigService, private federatedIdentitiesService: FederatedIdentitiesService) {
   }
@@ -54,7 +54,7 @@ export class MicrosoftService {
         code: "microsoft_invalid_grant",
         message: "The authorization code is invalid or has expired."
       });
-      this.logger.error("unexpected response from oauth2 google api 'oauth2.googleapis.com/token'", data);
+      this.logger.error("unexpected response from oauth2 Microsoft api 'login.microsoftonline.com/consumers/oauth2/v2.0/token'", data);
       throw new ServiceUnavailableException();
     }
 

@@ -55,7 +55,7 @@ export class GoogleService {
         code: "google_invalid_grant",
         message: "The authorization code is invalid or has expired."
       });
-      this.logger.error("unexpected response from oauth2 google api 'oauth2.googleapis.com/token'", data);
+      this.logger.error("unexpected response from oauth2 Google api 'oauth2.googleapis.com/token'", data);
       throw new ServiceUnavailableException();
     }
 

@@ -12,7 +12,7 @@ export class GithubService {
   private static readonly APPLICATION_SCOPES = [];
   private static readonly REDIRECT_URI = "https://api.faisal.gg/v1/auth/federated-identities/github/callback";
 
-  private readonly logger: Logger = new Logger("GoogleService");
+  private readonly logger: Logger = new Logger("GithubService");
 
   constructor(private config: ConfigService, private federatedIdentitiesService: FederatedIdentitiesService) {
   }
@@ -54,7 +54,7 @@ export class GithubService {
         code: "github_invalid_grant",
         message: "The authorization code is invalid or has expired."
       });
-      this.logger.error("unexpected response from oauth2 github api 'github.com/login/oauth/access_token'", data);
+      this.logger.error("unexpected response from oauth2 Github api 'github.com/login/oauth/access_token'", data);
       throw new ServiceUnavailableException();
     }
 
