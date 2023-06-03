@@ -12,7 +12,7 @@ import { TwitterModule } from "./twitter/twitter.module";
 @Module({
   controllers: [FederatedIdentitiesController],
   providers: [FederatedIdentitiesService],
-  imports: [GoogleModule, forwardRef(() => AuthModule), MicrosoftModule, GithubModule, TwitterModule],
+  imports: [GoogleModule, forwardRef(() => AuthModule), MicrosoftModule, GithubModule, TwitterModule, FacebookModule],
   exports: [FederatedIdentitiesService]
 })
 export class FederatedIdentitiesModule {
