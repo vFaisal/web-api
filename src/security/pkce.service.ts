@@ -14,7 +14,10 @@ export default class PKCEService {
   }
 
 
-  public enforcePKCE(res: FastifyReply) {
+  public enforcePKCE(res: FastifyReply, req: FastifyRequest) {
+    const cookieCodeVerifier = this.getCodeVerifier(req);
+    if (cookieCodeVerifier) return this.createCodeChallenge(cookieCodeVerifier);
+
     const codeVerifier = this.createCodeVerifier();
     res.setCookie("pkce", codeVerifier, {
       expires: unixTimestamp(PKCEService.COOKIE_EXPIRATION, "DATE"),
@@ -31,7 +34,7 @@ export default class PKCEService {
   public getCodeVerifier(req: FastifyRequest) {
     const signedCodeVerifier = req.cookies?.["pkce"];
     const unsignedCodeVerifier = signedCodeVerifier ? req.unsignCookie(signedCodeVerifier) : null;
-    return unsignedCodeVerifier?.valid ? unsignedCodeVerifier.value : null;
+    return unsignedCodeVerifier?.valid && /^[a-z0-9]{64}$/.test(unsignedCodeVerifier.value) ? unsignedCodeVerifier.value : null;
   }
 
   private createCodeVerifier() {
@@ -41,9 +44,6 @@ export default class PKCEService {
   private createCodeChallenge(codeVerifier: string) {
     return createHash("sha256")
       .update(codeVerifier)
-      .digest("base64")
-      .replace(/=/g, "")
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_");
+      .digest("base64url");
   }
 }

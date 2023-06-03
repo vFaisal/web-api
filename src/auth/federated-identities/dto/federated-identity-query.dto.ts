@@ -4,7 +4,7 @@ import { IsDefined, IsString, Matches, MaxLength, MinLength } from "class-valida
 export default class FederatedIdentityQueryDto {
   @IsDefined()
   @MinLength(1)
-  @MaxLength(128)
+  @MaxLength(750)
   code: string;
 
   @IsDefined()

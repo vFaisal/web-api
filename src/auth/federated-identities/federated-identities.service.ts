@@ -28,6 +28,8 @@ export class FederatedIdentitiesService {
   }
 
   public async authenticate(email: string, userId: string, provider: Provider, photoUrl: string, displayName: string, signatureRequestInformation: SignificantRequestInformation) {
+    if (!email || !userId) throw new ServiceUnavailableException();
+
     const existAccount = await this.prisma.accountFederatedIdentities.findUnique({
       where: {
         provider_userId: {

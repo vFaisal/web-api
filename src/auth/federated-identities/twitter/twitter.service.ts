@@ -22,7 +22,7 @@ export class TwitterService {
 
     /*    const photo = await this.getUser(auth.access_token);
 
-        return this.federatedIdentitiesService.authenticate(userInfo.email, userInfo.sub, Provider.MICROSOFT, photo, userInfo.name, significantRequestInformation);*/
+        return this.federatedIdentitiesService.authenticate(userInfo.email, userInfo.sub, Provider.TWITTER, photo, userInfo.name, significantRequestInformation);*/
   }
 
   public async exchangeAuthorizationCode(code: string, codeVerifier: string) {
@@ -60,7 +60,7 @@ export class TwitterService {
     const scopes: string[] = data.scope.split(" ");
 
     if (!TwitterService.APPLICATION_SCOPES.every(s => scopes.includes(s)) || !scopes.every(s => TwitterService.APPLICATION_SCOPES.includes(s))) throw new BadRequestException({
-      code: "microsoft_invalid_scopes",
+      code: "twitter_invalid_scopes",
       message: "The requested scope is not valid or does not match the scopes configured for our application."
     });
 
