@@ -4,7 +4,7 @@ import { CsrfProtection } from "../../../security/csrf-protection.decorator";
 import FederatedIdentityQueryDto from "../dto/federated-identity-query.dto";
 import { significantRequestInformation } from "../../../utils/util";
 import CSRFService from "../../../security/csrf.service";
-import { PkceVerifierCode } from "../../../security/pkce.decorator";
+import { PkceCodeVerifier } from "../../../security/pkce.decorator";
 import PKCEService from "../../../security/pkce.service";
 
 @Controller({
@@ -25,7 +25,7 @@ export class TwitterController {
     @Get("callback")
     @HttpCode(HttpStatus.OK)
     @CsrfProtection("auth")
-    callback(@Query() query: FederatedIdentityQueryDto, @PkceVerifierCode() verifierCode: string, @Req() req) {
+    callback(@Query() query: FederatedIdentityQueryDto, @PkceCodeVerifier() codeVerifier: string, @Req() req) {
       return this.twitterService.authenticate(query.code, verifierCode, significantRequestInformation(req));
     }*/
 }

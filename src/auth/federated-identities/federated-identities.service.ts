@@ -44,8 +44,8 @@ export class FederatedIdentitiesService {
     if (existAccount)
       return {
         auth: "login",
-        provider,
-        credentials: this.authService.createCredentials(existAccount.account, signatureRequestInformation, SessionType.FEDERATED_IDENTITY)
+        provider: provider.toLowerCase(),
+        credentials: await this.authService.createCredentials(existAccount.account, signatureRequestInformation, SessionType.FEDERATED_IDENTITY)
       };
     //Check if there email associated with this email;
     const account = await this.prisma.account.findUnique({

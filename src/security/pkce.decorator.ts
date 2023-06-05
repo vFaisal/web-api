@@ -6,7 +6,7 @@ import {
 import { FastifyRequest } from "fastify";
 
 
-export const PkceVerifierCode = createParamDecorator(
+export const PkceCodeVerifier = createParamDecorator(
   (data: unknown, ctx: ExecutionContext) => {
     const req: FastifyRequest = ctx.switchToHttp().getRequest();
     const signedCodeVerifier = req.cookies?.["pkce"];

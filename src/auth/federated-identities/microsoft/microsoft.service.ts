@@ -19,10 +19,10 @@ export class MicrosoftService {
   constructor(private config: ConfigService, private federatedIdentitiesService: FederatedIdentitiesService) {
   }
 
-  public async authenticate(code: string, significantRequestInformation: SignificantRequestInformation) {
+  public async authenticate(code: string, codeVerifier: string, significantRequestInformation: SignificantRequestInformation) {
 
     //exchange code here//
-    const auth = await this.exchangeAuthorizationCode(code);
+    const auth = await this.exchangeAuthorizationCode(code, codeVerifier);
 
     const userInfo = this.federatedIdentitiesService.getUserInfoByDecodingIdToken(auth.id_token);
     const photo = await this.getProfilePhoto(auth.access_token);
@@ -31,7 +31,7 @@ export class MicrosoftService {
   }
 
 
-  public async exchangeAuthorizationCode(code: string) {
+  public async exchangeAuthorizationCode(code: string, codeVerifier: string) {
     const res = await fetch("https://login.microsoftonline.com/consumers/oauth2/v2.0/token", {
       method: "POST",
       headers: {
@@ -44,6 +44,7 @@ export class MicrosoftService {
         code: code,
         scope: MicrosoftService.APPLICATION_SCOPES.join(" "),
         grant_type: "authorization_code",
+        code_verifier: codeVerifier,
         redirect_uri: MicrosoftService.REDIRECT_URI
       })
     });
@@ -83,15 +84,18 @@ export class MicrosoftService {
     return null;
   }
 
-  public redirectAuthEndpointUrl(state: string, selectAccount = false) {
+  public redirectAuthEndpointUrl(state: string, codeChallenge: string, selectAccount = false) {
     const params = new URLSearchParams({
       client_id: this.config.getOrThrow("MICROSOFT_CLIENT_ID"),
       response_type: "code",
       state: state,
       scope: MicrosoftService.APPLICATION_SCOPES.join(" "),
-      prompt: selectAccount ? "select_account" : "none",
-      redirect_uri: MicrosoftService.REDIRECT_URI
+      //prompt: selectAccount ? "select_account" : "consent",
+      redirect_uri: MicrosoftService.REDIRECT_URI,
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256"
     });
+    if (selectAccount) params.set("prompt", "select_account");
     return MicrosoftService.AUTH_ENDPOINT + "?" + params.toString();
   }
 }

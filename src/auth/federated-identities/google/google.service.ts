@@ -19,10 +19,10 @@ export class GoogleService {
   }
 
 
-  public async authenticate(code: string, significantRequestInformation: SignificantRequestInformation) {
+  public async authenticate(code: string, codeVerifier: string, significantRequestInformation: SignificantRequestInformation) {
 
     //exchange code here//
-    const auth = await this.exchangeAuthorizationCode(code);
+    const auth = await this.exchangeAuthorizationCode(code, codeVerifier);
 
     const userInfo = this.federatedIdentitiesService.getUserInfoByDecodingIdToken(auth.id_token);
 
@@ -34,7 +34,7 @@ export class GoogleService {
     return this.federatedIdentitiesService.authenticate(userInfo.email, userInfo.sub, Provider.GOOGLE, userInfo.picture, userInfo.name, significantRequestInformation);
   }
 
-  public async exchangeAuthorizationCode(code: string) {
+  public async exchangeAuthorizationCode(code: string, codeVerifier: string) {
     const res = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: {
@@ -45,6 +45,7 @@ export class GoogleService {
         client_secret: this.config.getOrThrow("GOOGLE_CLIENT_SECRET"),
         code: code,
         grant_type: "authorization_code",
+        code_verifier: codeVerifier,
         redirect_uri: GoogleService.REDIRECT_URI
       })
     });
@@ -70,7 +71,7 @@ export class GoogleService {
 
   }
 
-  public redirectAuthEndpointUrl(state: string, selectAccount = false) {
+  public redirectAuthEndpointUrl(state: string, codeChallenge: string, selectAccount = false) {
     const params = new URLSearchParams({
       client_id: this.config.getOrThrow("GOOGLE_CLIENT_ID"),
       response_type: "code",
@@ -79,7 +80,9 @@ export class GoogleService {
       access_type: "offline",
       include_granted_scopes: "true",
       prompt: selectAccount ? "select_account" : "none",
-      redirect_uri: GoogleService.REDIRECT_URI
+      redirect_uri: GoogleService.REDIRECT_URI,
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256"
     });
     return GoogleService.AUTH_ENDPOINT + "?" + params.toString();
   }

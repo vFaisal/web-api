@@ -3,7 +3,7 @@ import { FacebookService } from "./facebook.service";
 import PKCEService from "../../../security/pkce.service";
 import { CsrfProtection } from "../../../security/csrf-protection.decorator";
 import CSRFService from "../../../security/csrf.service";
-import { PkceVerifierCode } from "../../../security/pkce.decorator";
+import { PkceCodeVerifier } from "../../../security/pkce.decorator";
 import { significantRequestInformation } from "../../../utils/util";
 import FederatedIdentityQueryDto from "../dto/federated-identity-query.dto";
 
@@ -25,7 +25,7 @@ export class FacebookController {
   @Get("callback")
   @HttpCode(HttpStatus.OK)
   @CsrfProtection("auth")
-  callback(@Query() query: FederatedIdentityQueryDto, @PkceVerifierCode() verifierCode: string, @Req() req) {
-    return this.facebookService.authenticate(query.code, verifierCode, significantRequestInformation(req));
+  callback(@Query() query: FederatedIdentityQueryDto, @PkceCodeVerifier() codeVerifier: string, @Req() req) {
+    return this.facebookService.authenticate(query.code, codeVerifier, significantRequestInformation(req));
   }
 }
