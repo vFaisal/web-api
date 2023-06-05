@@ -12,6 +12,8 @@ import OneTimePasswordEntity from "./entities/one-time-password.entity";
 import RedisService from "../../providers/redis.service";
 import { RegistrationService } from "../registration.service";
 import RegistrationEntity from "../entities/registration.entity";
+import { ConfigService } from "@nestjs/config";
+import SendgridService from "../../providers/sendgrid.service";
 
 @Injectable()
 export class VerificationService {
@@ -19,7 +21,7 @@ export class VerificationService {
   private static readonly ONE_TIME_PASSWORD_EXPIRATION = 60 * 15;
   private static readonly DEFAULT_ALLOWED_ATTEMPTS = 10;
 
-  constructor(private prisma: PrismaService, private kv: RedisService) {
+  constructor(private readonly prisma: PrismaService, private readonly kv: RedisService, private readonly config: ConfigService, private readonly sendgrid: SendgridService) {
   }
 
 
@@ -51,6 +53,17 @@ export class VerificationService {
       attempts: 0,
       createdTimestampAt: unixTimestamp()
     }));
+
+    if (this.config.get("NODE_ENV") == "production") {
+      this.sendgrid.sendEmail(email, "Email verification", {
+        type: "text/plain",
+        value: "Dear User,\n" +
+          "\n" +
+          "Thank you for creating an account with us. To ensure the security of your information, we require email verification. Please enter the following 6-digit code on our website to proceed:\n" +
+          "\n" +
+          "Verification Code: " + randomDigit
+      });
+    }
 
     console.log("Verification Code: ", randomDigit);
     return {
