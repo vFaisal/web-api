@@ -5,10 +5,11 @@ import helmet from "helmet";
 import { PrismaService } from "./providers/prisma.service";
 import fastifyCookie from "@fastify/cookie";
 import { FastifyAdapter, NestFastifyApplication } from "@nestjs/platform-fastify";
+import multipart from "@fastify/multipart";
 import * as process from "process";
 
 (async () => {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({}), {
     logger: ["debug", "error", "warn", "log", "verbose"]
   });
   await app.register(fastifyCookie, {
@@ -20,6 +21,8 @@ import * as process from "process";
   }));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(helmet.hidePoweredBy());
+  await app.register(multipart);
+  // app.use(multipart);
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: VERSION_NEUTRAL

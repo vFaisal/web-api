@@ -12,6 +12,7 @@ model Account {
   id              BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
   publicId        String   @unique @db.VarChar(16)
   displayName     String?  @db.VarChar(100)
+  photoHash       String?  @db.VarChar(32)
   email           String   @unique @db.VarChar(320)
   passwordHash    String?  @db.Text
   emailVerifiedAt DateTime @updatedAt @db.Timestamp(0)

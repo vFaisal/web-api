@@ -63,10 +63,11 @@ export class AuthService {
     };
   }
 
-  private async addCredentialsToCache(jwtPayload: AppJWTPayload) {
+  private async addCredentialsToCache(jwtPayload: AppJWTPayload, accountId: bigint) {
     //Cache the access token for revocation (We add await if we want to use cache service like redis);
     await this.kv.setex(`session:${jwtPayload.sid}`, AuthService.EXPIRATION.ACCESS_TOKEN /* 1 hour same the access token expiration */, {
       accountPublicId: jwtPayload.sub,
+      accountId: String(accountId),
       sessionId: jwtPayload.sid,
       rid: jwtPayload.rid,
       createdTimestampAt: unixTimestamp(),
@@ -80,7 +81,7 @@ export class AuthService {
     const jwt = await this.createJWT(account.publicId);
 
     //Add refresh token to database;
-    await this.prisma.accountSession.create({
+    const session = await this.prisma.accountSession.create({
       data: {
         type: target,
         accountId: account.id,
@@ -101,10 +102,13 @@ export class AuthService {
             }
           }
         }
+      },
+      select: {
+        accountId: true
       }
     });
 
-    await this.addCredentialsToCache(jwt.payload);
+    await this.addCredentialsToCache(jwt.payload, session.accountId);
 
     return {
       accessToken: jwt.accessToken,
@@ -135,7 +139,12 @@ export class AuthService {
           select: {
             id: true,
             revokedAt: true,
-            account: true
+            account: {
+              select: {
+                id: true,
+                publicId: true
+              }
+            }
           }
         }
       }
@@ -150,7 +159,7 @@ export class AuthService {
         ref: payload.rid
       }
     });
-    if (ref) throw new BadRequestException("Invalid refresh token", "This token has been used before");
+    if (ref) throw new BadRequestException("Invalid refresh token", "This refresh token has been used before.");
 
     await this.kv.del(`session:${payload.sid}`);
 
@@ -167,7 +176,7 @@ export class AuthService {
         userAgent: significantRequestInformation.userAgent
       }
     });
-    await this.prisma.accountSessionTokens.create({
+    const session = await this.prisma.accountSessionTokens.create({
       data: {
         sessionId: tokenSession.session.id,
         token: jwt.payload.rid,
@@ -177,7 +186,7 @@ export class AuthService {
       }
     });
 
-    await this.addCredentialsToCache(jwt.payload);
+    await this.addCredentialsToCache(jwt.payload, tokenSession.session.account.id);
 
 
     return {
