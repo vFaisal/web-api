@@ -30,6 +30,7 @@ enum SessionType {
 
 model AccountSession {
   id        BigInt      @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId  String      @unique @db.VarChar(16)
   accountId BigInt      @db.UnsignedBigInt
   type      SessionType
   revokedAt DateTime?   @db.Timestamp(0)

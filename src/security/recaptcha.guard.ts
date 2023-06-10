@@ -9,6 +9,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { Reflector } from "@nestjs/core";
 import { FastifyRequest } from "fastify";
+import { retry } from "rxjs";
 
 
 @Injectable()
@@ -17,7 +18,8 @@ export default class RecaptchaGuard implements CanActivate {
   }
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
-    return true;
+    if (this.config.getOrThrow("NODE_ENV") !== "production") return true;
+
     const action = this.reflector.get<string>("recaptchaAction", context.getHandler());
 
     const token = this.extractTokenFromHeader(context.switchToHttp().getRequest());

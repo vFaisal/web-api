@@ -84,6 +84,7 @@ export class AuthService {
     const session = await this.prisma.accountSession.create({
       data: {
         type: target,
+        publicId: generateNanoId(),
         accountId: account.id,
         tokens: {
           create: {

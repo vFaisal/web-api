@@ -39,7 +39,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
     });
 
-    //Check the session is valid in cache (We add await if we want to use cache service like redis);
+    //Check the sessions is valid in cache (We add await if we want to use cache service like redis);
     const session = new SessionEntity(await this.kv.get(`session:${payload.sid}`));
     if (!session.isValid()) throw new UnauthorizedException();
 

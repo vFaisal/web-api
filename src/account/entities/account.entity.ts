@@ -31,9 +31,10 @@ export class AccountEntity {
   createdAt: Date;
 
   constructor(account: Partial<Account>, federatedIdentities?: Partial<AccountFederatedIdentities>[]) {
-    this._id = account.id;
-    delete account.id;
-    Object.assign(this, account);
+    const _account = structuredClone(account);
+    this._id = _account.id;
+    delete _account.id;
+    Object.assign(this, _account);
     this.federatedIdentities = federatedIdentities?.map(f => f.provider) ?? [];
   }
 
