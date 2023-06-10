@@ -17,7 +17,7 @@ export class AuthGuard implements CanActivate {
 
   private logger: Logger = new Logger("AuthGuard");
 
-  constructor(private jwtService: JwtService, private prisma: PrismaService, private config: ConfigService, private kv: RedisService) {
+  constructor(private readonly jwtService: JwtService, private readonly prisma: PrismaService, private readonly config: ConfigService, private readonly kv: RedisService) {
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {

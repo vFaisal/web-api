@@ -46,6 +46,7 @@ model AccountSession {
 
 model AccountSessionTokens {
   id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId  String   @unique @db.VarChar(16)
   sessionId BigInt   @db.UnsignedBigInt
   visitorId BigInt   @unique @db.UnsignedBigInt
   token     String   @unique @db.VarChar(100)

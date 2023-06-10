@@ -63,15 +63,15 @@ export class AuthService {
     };
   }
 
-  private async addCredentialsToCache(jwtPayload: AppJWTPayload, accountId: bigint) {
+  private async addCredentialsToCache(jwtPayload: AppJWTPayload, primarySessionId: string, accountId: bigint) {
     //Cache the access token for revocation (We add await if we want to use cache service like redis);
     await this.kv.setex(`session:${jwtPayload.sid}`, AuthService.EXPIRATION.ACCESS_TOKEN /* 1 hour same the access token expiration */, {
       accountPublicId: jwtPayload.sub,
       accountId: String(accountId),
+      primarySessionId: primarySessionId,
       sessionId: jwtPayload.sid,
       rid: jwtPayload.rid,
-      createdTimestampAt: unixTimestamp(),
-      revokedTimestampAt: null
+      createdTimestampAt: unixTimestamp()
     });
   }
 
@@ -80,14 +80,16 @@ export class AuthService {
 
     const jwt = await this.createJWT(account.publicId);
 
+    const primarySessionId = generateNanoId();
     //Add refresh token to database;
     const session = await this.prisma.accountSession.create({
       data: {
         type: target,
-        publicId: generateNanoId(),
+        publicId: primarySessionId,
         accountId: account.id,
         tokens: {
           create: {
+            publicId: jwt.payload.sid,
             token: jwt.payload.rid,
             expires: unixTimestamp(AuthService.EXPIRATION.REFRESH_TOKEN, "DATE"),
             visitor: {
@@ -109,7 +111,7 @@ export class AuthService {
       }
     });
 
-    await this.addCredentialsToCache(jwt.payload, session.accountId);
+    await this.addCredentialsToCache(jwt.payload, primarySessionId, session.accountId);
 
     return {
       accessToken: jwt.accessToken,
@@ -138,6 +140,7 @@ export class AuthService {
       select: {
         session: {
           select: {
+            publicId: true,
             id: true,
             revokedAt: true,
             account: {
@@ -179,6 +182,7 @@ export class AuthService {
     });
     const session = await this.prisma.accountSessionTokens.create({
       data: {
+        publicId: jwt.payload.sid,
         sessionId: tokenSession.session.id,
         token: jwt.payload.rid,
         expires: unixTimestamp(AuthService.EXPIRATION.REFRESH_TOKEN, "DATE"),
@@ -187,7 +191,7 @@ export class AuthService {
       }
     });
 
-    await this.addCredentialsToCache(jwt.payload, tokenSession.session.account.id);
+    await this.addCredentialsToCache(jwt.payload, tokenSession.session.publicId, tokenSession.session.account.id);
 
 
     return {
