@@ -11,6 +11,7 @@ import { PrismaService } from "../providers/prisma.service";
 import SessionEntity from "./entities/session.entity";
 import { ConfigService } from "@nestjs/config";
 import RedisService from "../providers/redis.service";
+import { AppJWTPayload } from "./auth.service";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -27,7 +28,7 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException();
 
 
-    const payload = await this.jwtService.verifyAsync(
+    const payload: AppJWTPayload = await this.jwtService.verifyAsync(
       token,
       {
         secret: this.config.getOrThrow("JWT_256_SECRET"),
@@ -40,7 +41,7 @@ export class AuthGuard implements CanActivate {
     });
 
     //Check the sessions is valid in cache (We add await if we want to use cache service like redis);
-    const session = new SessionEntity(await this.kv.get(`session:${payload.sid}`));
+    const session = new SessionEntity(await this.kv.get(`session:${payload.spi}`));
     if (!session.isValid()) throw new UnauthorizedException();
 
     request.session = session;

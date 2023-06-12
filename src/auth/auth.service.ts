@@ -44,8 +44,8 @@ export class AuthService {
 
   private async createJWT(accountPublicId: string) {
     const payload: AppJWTPayload = {
-      sid: generateNanoId(),
-      rid: generateNanoId(32),
+      spi: generateNanoId(), // Secondary public id (from AccountSessionTokens table)
+      tkn: generateNanoId(32), //Token for refresh session (from AccountSessionTokens table)
       sub: accountPublicId
     };
     return {
@@ -63,16 +63,18 @@ export class AuthService {
     };
   }
 
-  private async addCredentialsToCache(jwtPayload: AppJWTPayload, primarySessionId: string, accountId: bigint) {
+  private async addCredentialsToCache(jwtPayload: AppJWTPayload, primaryPublicId: string, accountId: bigint) {
     //Cache the access token for revocation (We add await if we want to use cache service like redis);
-    await this.kv.setex(`session:${jwtPayload.sid}`, AuthService.EXPIRATION.ACCESS_TOKEN /* 1 hour same the access token expiration */, {
-      accountPublicId: jwtPayload.sub,
-      accountId: String(accountId),
-      primarySessionId: primarySessionId,
-      sessionId: jwtPayload.sid,
-      rid: jwtPayload.rid,
-      createdTimestampAt: unixTimestamp()
-    });
+    await this.kv.setex(`session:${jwtPayload.spi}`, AuthService.EXPIRATION.ACCESS_TOKEN /* 1 hour same the access token expiration */, new SessionEntity({
+      ppi: primaryPublicId,
+      spi: jwtPayload.spi,
+      tkn: jwtPayload.tkn,
+      act: {
+        id: accountId,
+        pid: jwtPayload.sub
+      },
+      cta: unixTimestamp()
+    }));
   }
 
 
@@ -89,8 +91,8 @@ export class AuthService {
         accountId: account.id,
         tokens: {
           create: {
-            publicId: jwt.payload.sid,
-            token: jwt.payload.rid,
+            publicId: jwt.payload.spi,
+            token: jwt.payload.tkn,
             expires: unixTimestamp(AuthService.EXPIRATION.REFRESH_TOKEN, "DATE"),
             visitor: {
               create: {
@@ -121,7 +123,7 @@ export class AuthService {
 
   public async refreshToken(token: string, significantRequestInformation: SignificantRequestInformation) {
 
-    const payload = await this.jwtService.verifyAsync(
+    const refreshTokenPayload: AppJWTPayload = await this.jwtService.verifyAsync(
       token,
       {
         secret: this.config.getOrThrow("JWT_512_SECRET"),
@@ -135,7 +137,7 @@ export class AuthService {
 
     const tokenSession = await this.prisma.accountSessionTokens.findUnique({
       where: {
-        token: payload.rid
+        token: refreshTokenPayload.tkn
       },
       select: {
         session: {
@@ -160,12 +162,12 @@ export class AuthService {
     //Check if the refresh token has been used;
     const ref = await this.prisma.accountSessionTokens.findUnique({
       where: {
-        ref: payload.rid
+        ref: refreshTokenPayload.tkn
       }
     });
     if (ref) throw new BadRequestException("Invalid refresh token", "This refresh token has been used before.");
 
-    await this.kv.del(`session:${payload.sid}`);
+    await this.kv.del(`session:${refreshTokenPayload.spi}`);
 
     const jwt = await this.createJWT(tokenSession.session.account.publicId);
 
@@ -182,11 +184,11 @@ export class AuthService {
     });
     const session = await this.prisma.accountSessionTokens.create({
       data: {
-        publicId: jwt.payload.sid,
+        publicId: jwt.payload.spi,
         sessionId: tokenSession.session.id,
-        token: jwt.payload.rid,
+        token: jwt.payload.tkn,
         expires: unixTimestamp(AuthService.EXPIRATION.REFRESH_TOKEN, "DATE"),
-        ref: payload.rid,
+        ref: refreshTokenPayload.tkn,
         visitorId: visitor.id
       }
     });
@@ -204,7 +206,7 @@ export class AuthService {
 
     await this.prisma.accountSessionTokens.update({
       where: {
-        token: session.rid
+        token: session.getToken()
       },
       data: {
         session: {
@@ -217,14 +219,14 @@ export class AuthService {
       }
     }).catch(async (err) => {
       if (err.code === "P2025") {
-        await this.kv.del(`session:${session.sessionId}`);
+        await this.kv.del(`session:${session.getSecondaryPublicId()}`);
         throw new BadRequestException("Session not exist.");
       }
-      console.log(err);
+      this.logger.error("Something was wrong while revoking token.", session, err);
       throw new ServiceUnavailableException();
     });
 
-    await this.kv.del(`session:${session.sessionId}`);
+    await this.kv.del(`session:${session.getSecondaryPublicId()}`);
 
 
   }
@@ -232,8 +234,8 @@ export class AuthService {
 }
 
 
-interface AppJWTPayload {
+export interface AppJWTPayload {
   sub: string,
-  sid: string,
-  rid: string
+  spi: string,
+  tkn: string
 }

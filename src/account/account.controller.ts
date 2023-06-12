@@ -23,7 +23,7 @@ export class AccountController {
   @HttpCode(200)
   getAccount(@Req() request) {
     const session: SessionEntity = request.session;
-    return this.accountService.getSafeAccountData(session.accountId);
+    return this.accountService.getSafeAccountData(session.getAccount().id);
   }
 
   @Put("photo")

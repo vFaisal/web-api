@@ -50,7 +50,7 @@ export class AccountService {
 
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
-        id: session.accountId
+        id: session.getAccount().id
       },
       select: {
         photoHash: true
@@ -66,7 +66,7 @@ export class AccountService {
         photoHash: generatedImageId
       },
       where: {
-        id: session.accountId
+        id: session.getAccount().id
       }
     });
 
@@ -78,7 +78,7 @@ export class AccountService {
   public async deletePhoto(session: SessionEntity) {
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
-        id: session.accountId
+        id: session.getAccount().id
       },
       select: {
         photoHash: true
@@ -91,7 +91,7 @@ export class AccountService {
           photoHash: null
         },
         where: {
-          id: session.accountId
+          id: session.getAccount().id
         }
       });
     }
