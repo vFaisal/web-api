@@ -9,7 +9,7 @@ export default class SessionEntity {
   };
   private readonly cta: number; //createdTimestampAt
 
-  constructor({ ppi, spi, tkn, act, cta }: {
+  constructor(data: {
     ppi: string,
     spi: string,
     tkn: string,
@@ -19,14 +19,14 @@ export default class SessionEntity {
     },
     cta: number
   }) {
-    this.ppi = ppi;
-    this.spi = spi;
-    this.tkn = tkn;
+    this.ppi = data?.ppi;
+    this.spi = data?.spi;
+    this.tkn = data?.tkn;
     this.act = {
-      id: String(act.id),
-      pid: act.pid
+      id: String(data?.act.id),
+      pid: data?.act.pid
     };
-    this.cta = cta;
+    this.cta = data?.cta;
   }
 
   public isValid(): boolean {

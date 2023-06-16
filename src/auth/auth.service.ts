@@ -16,7 +16,7 @@ import RedisService from "../providers/redis.service";
 export class AuthService {
 
   private logger: Logger = new Logger("AuthService");
-  private static readonly EXPIRATION = {
+  public static readonly EXPIRATION = {
     ACCESS_TOKEN: 60 * 60, // 1h (Seconds)
     REFRESH_TOKEN: 60 * 60 * 24 * 14 // 14 Days (Seconds)
   };

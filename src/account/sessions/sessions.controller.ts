@@ -2,7 +2,6 @@ import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Re
 import { SessionsService } from "./sessions.service";
 import { AuthGuard } from "../../auth/auth.guard";
 import { FastifyRequest } from "fastify";
-import UAParser from "ua-parser-js";
 import SessionEntity from "../../auth/entities/session.entity";
 import ParseNanoidPipe from "../../Pipes/parse-nanoid.pipe";
 
@@ -25,7 +24,7 @@ export class SessionsController {
   @Delete(":id")
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteSessions(@Req() request: FastifyRequest, @Param("id", new ParseNanoidPipe(16)) sessionId: string) {
+  deleteSession(@Req() request: FastifyRequest, @Param("id", new ParseNanoidPipe(16)) sessionId: string) {
     const session: SessionEntity = (request as any).session;
     return this.sessionService.delete(session, sessionId);
   }
@@ -33,7 +32,9 @@ export class SessionsController {
   @Delete()
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  deleteSession() {
+  deleteSessions(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.sessionService.deleteAll(session);
   }
 
 }
