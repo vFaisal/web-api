@@ -61,7 +61,7 @@ export class AccountService {
 
     await this.r2.upload(bufferFile, generatedImageId);
 
-    await this.prisma.account.update({
+    await this.prisma.account.updateMany({
       data: {
         photoHash: generatedImageId
       },
@@ -86,7 +86,7 @@ export class AccountService {
     });
     if (account.photoHash) {
       await this.r2.delete(account.photoHash);
-      await this.prisma.account.update({
+      await this.prisma.account.updateMany({
         data: {
           photoHash: null
         },
