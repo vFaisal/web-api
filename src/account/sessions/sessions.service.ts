@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import SessionEntity from "../../auth/entities/session.entity";
 import { PrismaService } from "../../providers/prisma.service";
-import TrustedAccountSessionEntity from "./dto/trusted-account-session.entity";
+import TrustedAccountSessionEntity from "./entities/trusted-account-session.entity";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime";
 import RedisService from "../../providers/redis.service";
 import { unixTimestamp } from "../../utils/util";

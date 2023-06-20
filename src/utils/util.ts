@@ -41,3 +41,51 @@ export function significantRequestInformation(req: Request): SignificantRequestI
     userAgent: req.headers["user-agent"]
   };
 }
+
+const base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+export function base32Encode(buffer: any) {
+  let encoded = "";
+
+  let bits = 0;
+  let value = 0;
+
+  for (const byte of buffer) {
+    value = (value << 8) | byte;
+    bits += 8;
+
+    while (bits >= 5) {
+      const index = (value >> (bits - 5)) & 0x1f;
+      encoded += base32Alphabet[index];
+      bits -= 5;
+    }
+  }
+
+  if (bits > 0) {
+    const index = (value << (5 - bits)) & 0x1f;
+    encoded += base32Alphabet[index];
+  }
+
+  return encoded;
+}
+
+export function base32Decode(encoded: any) {
+  let buffer = Buffer.alloc(Math.ceil((encoded.length * 5) / 8));
+
+  let bits = 0;
+  let value = 0;
+  let bufferIndex = 0;
+
+  for (const char of encoded) {
+    const index = base32Alphabet.indexOf(char);
+    value = (value << 5) | index;
+    bits += 5;
+
+    if (bits >= 8) {
+      buffer[bufferIndex++] = (value >> (bits - 8)) & 0xff;
+      bits -= 8;
+    }
+  }
+
+  return buffer;
+}

@@ -15,13 +15,9 @@ import SessionEntity from "../auth/entities/session.entity";
 @Injectable()
 export class AccountService {
 
-  private logger: Logger = new Logger("AccountService");
+  private readonly logger: Logger = new Logger("AccountService");
 
-  constructor(private prisma: PrismaService, private readonly r2: R2Service) {
-  }
-
-  public getAccount(id: bigint) {
-
+  constructor(private readonly prisma: PrismaService, private readonly r2: R2Service) {
   }
 
   public async getSafeAccountData(id: bigint) {

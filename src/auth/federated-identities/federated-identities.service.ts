@@ -96,6 +96,8 @@ export class FederatedIdentitiesService {
     const account = await this.prisma.account.create({
       data: {
         email: registration.email,
+        emailVerifiedAt: new Date(),
+        countryCode: "SA",
         publicId: generateNanoId(),
         federatedIdentities: {
           create: {
