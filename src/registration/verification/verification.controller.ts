@@ -1,26 +1,33 @@
-import { Body, Controller, HttpCode, HttpStatus, Patch, Post, Put, UseGuards } from "@nestjs/common";
-import { VerificationService } from "./verification.service";
-import CreateEmailVerificationDto from "./dto/create-email-verification.dto";
-import VerifyEmailDto from "./dto/verify-email.dto";
-import { Recaptcha } from "../../security/recaptch.decorator";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
+import { VerificationService } from './verification.service';
+import CreateEmailVerificationDto from './dto/create-email-verification.dto';
+import VerifyEmailDto from './dto/verify-email.dto';
+import { Recaptcha } from '../../security/recaptch.decorator';
 
 @Controller({
-  path: "registration/verification",
-  version: "1"
+  path: 'registration/verification',
+  version: '1',
 })
 export class VerificationController {
-  constructor(private readonly verificationService: VerificationService) {
-  }
+  constructor(private readonly verificationService: VerificationService) {}
 
-
-  @Post("/email")
+  @Post('/email')
   @HttpCode(HttpStatus.CREATED)
-  @Recaptcha("registration")
+  @Recaptcha('registration')
   root(@Body() body: CreateEmailVerificationDto) {
     return this.verificationService.createEmailVerification(body.email);
   }
 
-  @Patch("/email")
+  @Patch('/email')
   @HttpCode(HttpStatus.NO_CONTENT)
   verifyEmail(@Body() body: VerifyEmailDto) {
     return this.verificationService.verifyEmail(body);

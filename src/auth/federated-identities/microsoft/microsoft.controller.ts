@@ -1,31 +1,55 @@
-import { Controller, Get, HttpCode, HttpStatus, Query, Req, Res } from "@nestjs/common";
-import { MicrosoftService } from "./microsoft.service";
-import { CsrfProtection } from "../../../security/csrf-protection.decorator";
-import FederatedIdentityQueryDto from "../dto/federated-identity-query.dto";
-import { significantRequestInformation } from "../../../utils/util";
-import CSRFService from "../../../security/csrf.service";
-import PKCEService from "../../../security/pkce.service";
-import { PkceCodeVerifier } from "../../../security/pkce.decorator";
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
+import { MicrosoftService } from './microsoft.service';
+import { CsrfProtection } from '../../../security/csrf-protection.decorator';
+import FederatedIdentityQueryDto from '../dto/federated-identity-query.dto';
+import { significantRequestInformation } from '../../../utils/util';
+import CSRFService from '../../../security/csrf.service';
+import PKCEService from '../../../security/pkce.service';
+import { PkceCodeVerifier } from '../../../security/pkce.decorator';
 
 @Controller({
-  path: "/auth/federated-identities/microsoft",
-  version: "1"
+  path: '/auth/federated-identities/microsoft',
+  version: '1',
 })
 export class MicrosoftController {
-  constructor(private readonly microsoftService: MicrosoftService, private readonly csrfService: CSRFService, private readonly pkceService: PKCEService) {
-  }
+  constructor(
+    private readonly microsoftService: MicrosoftService,
+    private readonly csrfService: CSRFService,
+    private readonly pkceService: PKCEService,
+  ) {}
 
-  @Get("")
+  @Get('')
   @HttpCode(HttpStatus.SEE_OTHER)
   async root(@Res() res, @Req() req) {
-    const token = await this.csrfService.create(req, res, "auth");
-    res.redirect(this.microsoftService.redirectAuthEndpointUrl(token, this.pkceService.enforcePKCE(res, req)));
+    const token = await this.csrfService.create(req, res, 'auth');
+    res.redirect(
+      this.microsoftService.redirectAuthEndpointUrl(
+        token,
+        this.pkceService.enforcePKCE(res, req),
+      ),
+    );
   }
 
-  @Get("callback")
+  @Get('callback')
   @HttpCode(HttpStatus.OK)
-  @CsrfProtection("auth")
-  callback(@Query() query: FederatedIdentityQueryDto, @PkceCodeVerifier() codeVerifier: string, @Req() req) {
-    return this.microsoftService.authenticate(query.code, codeVerifier, significantRequestInformation(req));
+  @CsrfProtection('auth')
+  callback(
+    @Query() query: FederatedIdentityQueryDto,
+    @PkceCodeVerifier() codeVerifier: string,
+    @Req() req,
+  ) {
+    return this.microsoftService.authenticate(
+      query.code,
+      codeVerifier,
+      significantRequestInformation(req),
+    );
   }
 }

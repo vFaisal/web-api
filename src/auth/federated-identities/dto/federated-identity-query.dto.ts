@@ -1,5 +1,10 @@
-import { IsDefined, IsString, Matches, MaxLength, MinLength } from "class-validator";
-
+import {
+  IsDefined,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export default class FederatedIdentityQueryDto {
   @IsDefined()

@@ -1,22 +1,23 @@
-import { AccountService } from "./account.service";
+import { AccountService } from './account.service';
 import {
-  Controller, Delete,
+  Controller,
+  Delete,
   Get,
-  HttpCode, Put,
+  HttpCode,
+  Put,
   Req,
-  UseGuards
-} from "@nestjs/common";
-import { AuthGuard } from "../auth/auth.guard";
-import SessionEntity from "../auth/entities/session.entity";
-import { FastifyRequest } from "fastify";
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '../auth/auth.guard';
+import SessionEntity from '../auth/entities/session.entity';
+import { FastifyRequest } from 'fastify';
 
 @Controller({
-  path: "account",
-  version: "1"
+  path: 'account',
+  version: '1',
 })
 export class AccountController {
-  constructor(private readonly accountService: AccountService) {
-  }
+  constructor(private readonly accountService: AccountService) {}
 
   @Get()
   @UseGuards(AuthGuard)
@@ -26,7 +27,7 @@ export class AccountController {
     return this.accountService.getSafeAccountData(session.getAccount().id);
   }
 
-  @Put("photo")
+  @Put('photo')
   @UseGuards(AuthGuard)
   @HttpCode(201)
   async uploadPhoto(@Req() request: FastifyRequest) {
@@ -35,7 +36,7 @@ export class AccountController {
     return this.accountService.uploadPhoto(file, session);
   }
 
-  @Delete("photo")
+  @Delete('photo')
   @UseGuards(AuthGuard)
   @HttpCode(201)
   async deletePhoto(@Req() request: FastifyRequest) {

@@ -1,19 +1,23 @@
-import { Global, INestApplication, Injectable, OnModuleInit } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { PrismaClient } from "@prisma/client";
-
+import {
+  Global,
+  INestApplication,
+  Injectable,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   constructor(private config: ConfigService) {
     super({
-      log: ["query", "info", "warn", "error"],
-      errorFormat: "pretty",
+      log: ['query', 'info', 'warn', 'error'],
+      errorFormat: 'pretty',
       datasources: {
         db: {
-          url: config.getOrThrow("DATABASE_URL")
-        }
-      }
+          url: config.getOrThrow('DATABASE_URL'),
+        },
+      },
     });
   }
 
@@ -23,7 +27,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async enableShutdownHooks(app: INestApplication) {
-    this.$on("beforeExit", async () => {
+    this.$on('beforeExit', async () => {
       await app.close();
     });
   }

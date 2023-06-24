@@ -1,6 +1,6 @@
-import { Exclude, Expose } from "class-transformer";
-import { Account, AccountFederatedIdentities, Provider } from "@prisma/client";
-import R2Service from "../../providers/r2.service";
+import { Exclude, Expose } from 'class-transformer';
+import { Account, AccountFederatedIdentities, Provider } from '@prisma/client';
+import R2Service from '../../providers/r2.service';
 
 export class AccountEntity {
   @Exclude()
@@ -9,12 +9,12 @@ export class AccountEntity {
     federatedIdentities: Partial<AccountFederatedIdentities>[];
   } = {
     account: null,
-    federatedIdentities: []
+    federatedIdentities: [],
   };
 
   constructor(
     account: Partial<Account>,
-    federatedIdentities?: Partial<AccountFederatedIdentities>[]
+    federatedIdentities?: Partial<AccountFederatedIdentities>[],
   ) {
     this.raw.account = account;
     this.raw.federatedIdentities = federatedIdentities ?? [];
@@ -33,7 +33,7 @@ export class AccountEntity {
   @Expose()
   public get photoUrl() {
     return this.raw.account.photoHash
-      ? R2Service.PUBLIC_CDN_DOMAIN + "/" + this.raw.account.photoHash
+      ? R2Service.PUBLIC_CDN_DOMAIN + '/' + this.raw.account.photoHash
       : null;
   }
 
@@ -46,23 +46,23 @@ export class AccountEntity {
   public get phone() {
     return this.havePhoneNumber()
       ? {
-        // country: "",
-        prefix: "+" + this.raw.account.phoneCountryCode,
-        number: this.raw.account.phoneNumber,
-        full:
-          "+" +
-          this.raw.account.phoneCountryCode +
-          this.raw.account.phoneCountryCode
-      }
+          // country: "",
+          prefix: '+' + this.raw.account.phoneCountryCode,
+          number: this.raw.account.phoneNumber,
+          full:
+            '+' +
+            this.raw.account.phoneCountryCode +
+            this.raw.account.phoneCountryCode,
+        }
       : null;
   }
 
   @Expose()
   public get verified() {
     const verified = [];
-    if (this.raw.account.emailVerifiedAt) verified.push("EMAIL");
+    if (this.raw.account.emailVerifiedAt) verified.push('EMAIL');
     if (this.havePhoneNumber() && this.raw.account.phoneVerifiedAt)
-      verified.push("PHONE");
+      verified.push('PHONE');
     return verified /*{
       email: !!this.raw.account.emailVerifiedAt,
       phone: !!(this.havePhoneNumber() && this.raw.account.phoneVerifiedAt)
@@ -71,18 +71,17 @@ export class AccountEntity {
 
   @Expose()
   public get twoFactor() {
-    const methods: TWO_FACTOR_METHODS[] = [];
+    const methods: Array<'EMAIL' | 'SMS' | 'WHATSAPP' | 'APP'> = [];
     if (this.raw.account.twoFactorAuthEmail && this.raw.account.emailVerifiedAt)
-      methods.push("EMAIL");
+      methods.push('EMAIL');
     if (
       this.raw.account.twoFactorAuthSMS &&
       this.raw.account.phoneVerifiedAt &&
       this.havePhoneNumber()
     )
-      methods.push("PHONE");
-    if (this.raw.account.twoFactorAuthWhatsapp) methods.push("WHATSAPP");
-    if (this.raw.account.twoFactorAuthAppKey)
-      methods.push("AUTHENTICATION_APP");
+      methods.push('SMS');
+    if (this.raw.account.twoFactorAuthWhatsapp) methods.push('WHATSAPP');
+    if (this.raw.account.twoFactorAuthAppKey) methods.push('APP');
     return {
       configured: methods.length > 0,
       methods /*: {
@@ -90,7 +89,7 @@ export class AccountEntity {
         sms: !!(!!this.raw.account.twoFactorAuthSMS && !!this.raw.account.phoneVerifiedAt && !!this.havePhoneNumber()),
         whatsapp: !!this.raw.account.twoFactorAuthWhatsapp,
         authenticationApp: !!this.raw.account.twoFactorAuthAppKey
-      }*/
+      }*/,
     };
   }
 
@@ -108,9 +107,3 @@ export class AccountEntity {
     return this.raw.account.phoneNumber && this.raw.account.phoneCountryCode;
   }
 }
-
-export type TWO_FACTOR_METHODS =
-  | "EMAIL"
-  | "PHONE"
-  | "WHATSAPP"
-  | "AUTHENTICATION_APP";

@@ -1,10 +1,9 @@
-import { Controller, Get, HttpCode, HttpStatus } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus } from '@nestjs/common';
 
 @Controller({
-  version: "1"
+  version: '1',
 })
 export class AppController {
-
   @Get()
   @HttpCode(204)
   root() {

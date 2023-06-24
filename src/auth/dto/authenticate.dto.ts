@@ -1,5 +1,5 @@
-import { Matches } from "class-validator";
-import Constants from "../../utils/constants";
+import { Matches } from 'class-validator';
+import Constants from '../../utils/constants';
 
 export default class AuthenticateDto {
   @Matches(Constants.EMAIL_VALIDATION_REGEX)
