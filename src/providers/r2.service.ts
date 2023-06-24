@@ -22,7 +22,6 @@ export default class R2Service {
   private readonly logger: Logger = new Logger('R2Service');
 
   constructor(private readonly config: ConfigService) {
-    console.log(this.config.getOrThrow('CLOUDFLARE_R2_ACCESS_KEY'));
     this.aws = new AwsClient({
       accessKeyId: this.config.getOrThrow('CLOUDFLARE_R2_ACCESS_KEY'),
       secretAccessKey: this.config.getOrThrow('CLOUDFLARE_R2_SECRET'),
