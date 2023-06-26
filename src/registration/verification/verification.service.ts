@@ -5,16 +5,16 @@ import {
   HttpStatus,
   Injectable,
 } from '@nestjs/common';
-import { PrismaService } from '../../providers/prisma.service';
-import { generateNanoId, unixTimestamp } from '../../utils/util';
+import { PrismaService } from '../../shared/providers/prisma.service';
+import { generateNanoId, unixTimestamp } from '../../shared/utils/util';
 import { randomInt } from 'crypto';
 import { hash, verify, argon2id } from 'argon2';
 import OneTimePasswordEntity from './entities/one-time-password.entity';
-import RedisService from '../../providers/redis.service';
+import RedisService from '../../shared/providers/redis.service';
 import { RegistrationService } from '../registration.service';
 import RegistrationEntity from '../entities/registration.entity';
 import { ConfigService } from '@nestjs/config';
-import SendgridService from '../../providers/sendgrid.service';
+import SendgridService from '../../shared/providers/sendgrid.service';
 
 @Injectable()
 export class VerificationService {

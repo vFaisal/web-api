@@ -3,14 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
 import SessionEntity from '../../auth/entities/session.entity';
 import { AccountService } from '../account.service';
-import RedisService from '../../providers/redis.service';
+import RedisService from '../../shared/providers/redis.service';
 import {
   base32Decode,
   base32Encode,
   generateNanoId,
   unixTimestamp,
-} from '../../utils/util';
-import { PrismaService } from '../../providers/prisma.service';
+} from '../../shared/utils/util';
+import { PrismaService } from '../../shared/providers/prisma.service';
 
 @Injectable()
 export class TwoFactorService {

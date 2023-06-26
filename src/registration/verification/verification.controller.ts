@@ -11,7 +11,7 @@ import {
 import { VerificationService } from './verification.service';
 import CreateEmailVerificationDto from './dto/create-email-verification.dto';
 import VerifyEmailDto from './dto/verify-email.dto';
-import { Recaptcha } from '../../security/recaptch.decorator';
+import { Recaptcha } from '../../shared/security/recaptch.decorator';
 
 @Controller({
   path: 'registration/verification',

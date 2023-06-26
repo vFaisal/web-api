@@ -1,7 +1,7 @@
 import { Expose } from 'class-transformer';
 import { AccountSession, AccountSessionTokens, Visitor } from '@prisma/client';
 import { UAParser } from 'ua-parser-js';
-import Constants from '../../../utils/constants';
+import Constants from '../../../shared/utils/constants';
 import { isIP } from 'class-validator';
 
 export default class TrustedAccountSessionEntity {

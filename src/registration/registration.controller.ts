@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { RegistrationService } from './registration.service';
 import RegistrationDto from './dto/registration.dto';
-import { significantRequestInformation } from '../utils/util';
+import { significantRequestInformation } from '../shared/utils/util';
 import { FastifyRequest } from 'fastify';
 
 @Controller({

@@ -1,5 +1,5 @@
 import { IsDefined, IsString, Matches, MinLength } from 'class-validator';
-import Constants from '../../../utils/constants';
+import Constants from '../../../shared/utils/constants';
 
 export default class FederatedRegistrationDto {
   @Matches(Constants.EMAIL_VALIDATION_REGEX)

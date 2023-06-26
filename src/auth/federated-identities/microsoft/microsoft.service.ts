@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { FederatedIdentitiesService } from '../federated-identities.service';
-import { SignificantRequestInformation } from '../../../utils/util';
+import { SignificantRequestInformation } from '../../../shared/utils/util';
 import { Provider } from '@prisma/client';
 
 @Injectable()

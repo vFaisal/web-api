@@ -1,4 +1,4 @@
-import { unixTimestamp } from '../../../utils/util';
+import { unixTimestamp } from '../../../shared/utils/util';
 import { ServiceUnavailableException } from '@nestjs/common';
 
 export default class OneTimePasswordEntity<T extends 'CREATION' | 'GET'> {

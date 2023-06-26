@@ -13,7 +13,7 @@ import { SessionsService } from './sessions.service';
 import { AuthGuard } from '../../auth/auth.guard';
 import { FastifyRequest } from 'fastify';
 import SessionEntity from '../../auth/entities/session.entity';
-import ParseNanoidPipe from '../../pipes/parse-nanoid.pipe';
+import ParseNanoidPipe from '../../shared/pipes/parse-nanoid.pipe';
 
 @Controller({
   path: 'account/sessions',
