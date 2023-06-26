@@ -8,12 +8,12 @@ import {
   Res,
 } from '@nestjs/common';
 import { TwitterService } from './twitter.service';
-import { CsrfProtection } from '../../../shared/security/csrf-protection.decorator';
+import { CsrfProtection } from '../../../core/security/csrf-protection.decorator';
 import FederatedIdentityQueryDto from '../dto/federated-identity-query.dto';
-import { significantRequestInformation } from '../../../shared/utils/util';
-import CSRFService from '../../../shared/security/csrf.service';
-import { PkceCodeVerifier } from '../../../shared/security/pkce.decorator';
-import PKCEService from '../../../shared/security/pkce.service';
+import { significantRequestInformation } from '../../../core/utils/util';
+import CSRFService from '../../../core/security/csrf.service';
+import { PkceCodeVerifier } from '../../../core/security/pkce.decorator';
+import PKCEService from '../../../core/security/pkce.service';
 
 @Controller({
   path: '/auth/federated-identities/twitter',

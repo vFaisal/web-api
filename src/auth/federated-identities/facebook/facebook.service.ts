@@ -9,7 +9,7 @@ import { FederatedIdentitiesService } from '../federated-identities.service';
 import {
   SignificantRequestInformation,
   unixTimestamp,
-} from '../../../shared/utils/util';
+} from '../../../core/utils/util';
 import { Provider } from '@prisma/client';
 import { createHmac } from 'crypto';
 

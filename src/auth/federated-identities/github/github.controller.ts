@@ -8,10 +8,10 @@ import {
   Res,
 } from '@nestjs/common';
 import { GithubService } from './github.service';
-import { CsrfProtection } from '../../../shared/security/csrf-protection.decorator';
+import { CsrfProtection } from '../../../core/security/csrf-protection.decorator';
 import FederatedIdentityQueryDto from '../dto/federated-identity-query.dto';
-import { significantRequestInformation } from '../../../shared/utils/util';
-import CSRFService from '../../../shared/security/csrf.service';
+import { significantRequestInformation } from '../../../core/utils/util';
+import CSRFService from '../../../core/security/csrf.service';
 
 @Controller({
   path: '/auth/federated-identities/github',

@@ -12,11 +12,11 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import AuthenticateDto from './dto/authenticate.dto';
-import { significantRequestInformation } from '../shared/utils/util';
+import { significantRequestInformation } from '../core/utils/util';
 import RefreshTokenDto from './dto/refresh-token.dto';
 import { AuthGuard } from './auth.guard';
 import SessionEntity from './entities/session.entity';
-import { Recaptcha } from '../shared/security/recaptch.decorator';
+import { Recaptcha } from '../core/security/recaptch.decorator';
 import { FastifyRequest } from 'fastify';
 
 @Controller({

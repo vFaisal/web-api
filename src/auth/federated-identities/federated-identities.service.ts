@@ -5,19 +5,19 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { PrismaService } from '../../shared/providers/prisma.service';
+import { PrismaService } from '../../core/providers/prisma.service';
 import { Provider, SessionType } from '@prisma/client';
 import {
   capitalize,
   generateNanoId,
   SignificantRequestInformation,
   unixTimestamp,
-} from '../../shared/utils/util';
+} from '../../core/utils/util';
 import { AuthService } from '../auth.service';
 import FederatedIdentityRegistrationEntity from './entities/federated-identity-registration.entity';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { AccountEntity } from '../../account/entities/account.entity';
-import RedisService from '../../shared/providers/redis.service';
+import RedisService from '../../core/providers/redis.service';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()

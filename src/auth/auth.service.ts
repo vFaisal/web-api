@@ -4,19 +4,19 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { PrismaService } from '../shared/providers/prisma.service';
+import { PrismaService } from '../core/providers/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { argon2id, verify } from 'argon2';
 import {
   generateNanoId,
   SignificantRequestInformation,
   unixTimestamp,
-} from '../shared/utils/util';
+} from '../core/utils/util';
 import { Account, SessionType } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import SessionEntity from './entities/session.entity';
 import { FastifyReply, FastifyRequest } from 'fastify';
-import RedisService from '../shared/providers/redis.service';
+import RedisService from '../core/providers/redis.service';
 
 @Injectable()
 export class AuthService {

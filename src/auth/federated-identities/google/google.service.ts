@@ -12,7 +12,7 @@ import { Provider } from '@prisma/client';
 import {
   SignificantRequestInformation,
   significantRequestInformation,
-} from '../../../shared/utils/util';
+} from '../../../core/utils/util';
 
 @Injectable()
 export class GoogleService {

@@ -6,11 +6,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import SessionEntity from '../../auth/entities/session.entity';
-import { PrismaService } from '../../shared/providers/prisma.service';
+import { PrismaService } from '../../core/providers/prisma.service';
 import TrustedAccountSessionEntity from './entities/trusted-account-session.entity';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import RedisService from '../../shared/providers/redis.service';
-import { unixTimestamp } from '../../shared/utils/util';
+import RedisService from '../../core/providers/redis.service';
+import { unixTimestamp } from '../../core/utils/util';
 import { AuthService } from '../../auth/auth.service';
 
 @Injectable()

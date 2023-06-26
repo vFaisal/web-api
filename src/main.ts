@@ -7,7 +7,7 @@ import {
   VersioningType,
 } from '@nestjs/common';
 import helmet from 'helmet';
-import { PrismaService } from './shared/providers/prisma.service';
+import { PrismaService } from './core/providers/prisma.service';
 import fastifyCookie from '@fastify/cookie';
 import {
   FastifyAdapter,

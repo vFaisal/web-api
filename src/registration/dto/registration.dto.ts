@@ -1,5 +1,5 @@
 import { IsDefined, Matches } from 'class-validator';
-import Constants from '../../shared/utils/constants';
+import Constants from '../../core/utils/constants';
 
 export default class RegistrationDto {
   @IsDefined()

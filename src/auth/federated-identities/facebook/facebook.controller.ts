@@ -8,11 +8,11 @@ import {
   Res,
 } from '@nestjs/common';
 import { FacebookService } from './facebook.service';
-import PKCEService from '../../../shared/security/pkce.service';
-import { CsrfProtection } from '../../../shared/security/csrf-protection.decorator';
-import CSRFService from '../../../shared/security/csrf.service';
-import { PkceCodeVerifier } from '../../../shared/security/pkce.decorator';
-import { significantRequestInformation } from '../../../shared/utils/util';
+import PKCEService from '../../../core/security/pkce.service';
+import { CsrfProtection } from '../../../core/security/csrf-protection.decorator';
+import CSRFService from '../../../core/security/csrf.service';
+import { PkceCodeVerifier } from '../../../core/security/pkce.decorator';
+import { significantRequestInformation } from '../../../core/utils/util';
 import FederatedIdentityQueryDto from '../dto/federated-identity-query.dto';
 
 @Controller({

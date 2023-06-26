@@ -5,12 +5,12 @@ import {
   ServiceUnavailableException,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
-import { PrismaService } from '../shared/providers/prisma.service';
+import { PrismaService } from '../core/providers/prisma.service';
 import { AccountEntity } from './entities/account.entity';
 import { MultipartFile } from '@fastify/multipart';
-import R2Service from '../shared/providers/r2.service';
+import R2Service from '../core/providers/r2.service';
 import { nanoid } from 'nanoid';
-import { generateNanoId } from '../shared/utils/util';
+import { generateNanoId } from '../core/utils/util';
 import SessionEntity from '../auth/entities/session.entity';
 
 @Injectable()

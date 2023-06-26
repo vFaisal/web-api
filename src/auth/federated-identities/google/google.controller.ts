@@ -9,11 +9,11 @@ import {
 } from '@nestjs/common';
 import { GoogleService } from './google.service';
 import FederatedIdentityQueryDto from '../dto/federated-identity-query.dto';
-import CSRFService from '../../../shared/security/csrf.service';
-import { significantRequestInformation } from '../../../shared/utils/util';
-import { CsrfProtection } from '../../../shared/security/csrf-protection.decorator';
-import { PkceCodeVerifier } from '../../../shared/security/pkce.decorator';
-import PKCEService from '../../../shared/security/pkce.service';
+import CSRFService from '../../../core/security/csrf.service';
+import { significantRequestInformation } from '../../../core/utils/util';
+import { CsrfProtection } from '../../../core/security/csrf-protection.decorator';
+import { PkceCodeVerifier } from '../../../core/security/pkce.decorator';
+import PKCEService from '../../../core/security/pkce.service';
 
 @Controller({
   path: '/auth/federated-identities/google',

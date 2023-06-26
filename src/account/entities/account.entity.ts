@@ -1,6 +1,6 @@
 import { Exclude, Expose } from 'class-transformer';
 import { Account, AccountFederatedIdentities, Provider } from '@prisma/client';
-import R2Service from '../../shared/providers/r2.service';
+import R2Service from '../../core/providers/r2.service';
 
 export class AccountEntity {
   @Exclude()

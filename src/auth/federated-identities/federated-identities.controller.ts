@@ -9,7 +9,7 @@ import {
 import { FederatedIdentitiesService } from './federated-identities.service';
 import { FastifyRequest } from 'fastify';
 import FederatedRegistrationDto from './dto/federated-registration.dto';
-import { significantRequestInformation } from '../../shared/utils/util';
+import { significantRequestInformation } from '../../core/utils/util';
 
 @Controller({
   path: '/auth/federated-identities',

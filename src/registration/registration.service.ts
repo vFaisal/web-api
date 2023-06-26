@@ -4,19 +4,19 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { PrismaService } from '../shared/providers/prisma.service';
+import { PrismaService } from '../core/providers/prisma.service';
 import RegistrationDto from './dto/registration.dto';
 import {
   generateNanoId,
   SignificantRequestInformation,
-} from '../shared/utils/util';
+} from '../core/utils/util';
 import { argon2id, hash } from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
 import { AuthService } from '../auth/auth.service';
 import { SessionType } from '@prisma/client';
 import OneTimePasswordEntity from './verification/entities/one-time-password.entity';
 import { AccountEntity } from '../account/entities/account.entity';
-import RedisService from '../shared/providers/redis.service';
+import RedisService from '../core/providers/redis.service';
 import RegistrationEntity from './entities/registration.entity';
 
 @Injectable()

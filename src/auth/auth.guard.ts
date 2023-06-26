@@ -7,10 +7,10 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
-import { PrismaService } from '../shared/providers/prisma.service';
+import { PrismaService } from '../core/providers/prisma.service';
 import SessionEntity from './entities/session.entity';
 import { ConfigService } from '@nestjs/config';
-import RedisService from '../shared/providers/redis.service';
+import RedisService from '../core/providers/redis.service';
 import { AppJWTPayload } from './auth.service';
 
 @Injectable()
