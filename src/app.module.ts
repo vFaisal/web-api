@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import SecurityModule from './core/security/security.module';
 import { AppController } from './app.controller';
 import { ProvidersModule } from './core/providers/providers.module';
+import ServicesModule from './core/services/services.module';
 
 @Global()
 @Module({
@@ -18,6 +19,7 @@ import { ProvidersModule } from './core/providers/providers.module';
       global: true,
     }),
     ProvidersModule,
+    ServicesModule,
     SecurityModule,
     AccountModule,
     AuthModule,

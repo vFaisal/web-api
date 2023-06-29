@@ -5,12 +5,17 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+/**
+ * Twilio ratelimit every verification:
+ *  - resend: 4 (Total send: 5)
+ *  - check attempts: 5
+ */
 @Injectable()
 export default class TwilioService {
   private static readonly VERIFY_API_BASE = 'https://verify.twilio.com/v2';
   private static readonly LOOKUPS_API_BASE = 'https://lookups.twilio.com/v2';
 
-  private readonly logger: Logger = new Logger('SendgridService');
+  private readonly logger: Logger = new Logger('TwilioService');
 
   constructor(private readonly config: ConfigService) {}
 
@@ -61,7 +66,7 @@ export default class TwilioService {
 
   public async createNewVerification(
     phoneNumber: string,
-    channel: 'sms' | 'whatsapp' | 'voice',
+    channel: Channel,
     retry = false,
   ) {
     const res = await this.request('/Verifications', 'post', {
@@ -71,8 +76,10 @@ export default class TwilioService {
     if (res.status !== 201) {
       if (res.status === 429) {
         this.logger.debug('Rate-limit reached for phone number: ', phoneNumber);
-        if (!retry)
-          await this.createNewVerification(phoneNumber, channel, true);
+        if (!retry) {
+          await this.cancelVerification(phoneNumber);
+          return this.createNewVerification(phoneNumber, channel, true);
+        }
       }
       this.logger.error(
         'Unexpected response from Twilio Verify [1] status: ',
@@ -108,7 +115,7 @@ export default class TwilioService {
     type: 'phone' | 'verificationSid',
     target: string,
     code: string,
-  ): Promise<any> {
+  ): Promise<Boolean | 'RATELIMIT'> {
     let payload = {
       Code: code,
     };
@@ -124,6 +131,7 @@ export default class TwilioService {
     const res = await this.request('/Verifications', 'post', payload);
 
     if (res.status != 200) {
+      if (res.status === 429) return 'RATELIMIT';
       this.logger.error(
         'Unexpected response from Twilio Verify [3] status: ',
         res.status,
@@ -132,7 +140,7 @@ export default class TwilioService {
       throw new ServiceUnavailableException();
     }
 
-    return res.data;
+    return res.data.valid;
   }
 
   public async cancelVerification(
@@ -177,3 +185,5 @@ export default class TwilioService {
     return data.valid;
   }
 }
+
+export type Channel = 'sms' | 'whatsapp' | 'voice';
