@@ -52,7 +52,7 @@ export class AccountEntity {
           full:
             '+' +
             this.raw.account.phoneCountryCode +
-            this.raw.account.phoneCountryCode,
+            this.raw.account.phoneNumber,
         }
       : null;
   }
@@ -72,16 +72,16 @@ export class AccountEntity {
   @Expose()
   public get twoFactor() {
     const methods: Array<'EMAIL' | 'SMS' | 'WHATSAPP' | 'APP'> = [];
-    if (this.raw.account.twoFactorAuthEmail && this.raw.account.emailVerifiedAt)
+    if (this.raw.account.mfaEmail && this.raw.account.emailVerifiedAt)
       methods.push('EMAIL');
     if (
-      this.raw.account.twoFactorAuthSMS &&
+      this.raw.account.mfaSMS &&
       this.raw.account.phoneVerifiedAt &&
       this.havePhoneNumber()
     )
       methods.push('SMS');
-    if (this.raw.account.twoFactorAuthWhatsapp) methods.push('WHATSAPP');
-    if (this.raw.account.twoFactorAuthAppKey) methods.push('APP');
+    if (this.raw.account.mfaSMS) methods.push('WHATSAPP');
+    if (this.raw.account.mfaAppKey) methods.push('APP');
     return {
       configured: methods.length > 0,
       methods /*: {

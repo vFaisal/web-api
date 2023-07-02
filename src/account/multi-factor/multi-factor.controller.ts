@@ -10,25 +10,25 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { TwoFactorService } from './two-factor.service';
+import { MultiFactorService } from './multi-factor.service';
 import { FastifyRequest } from 'fastify';
 import SessionEntity from '../../auth/entities/session.entity';
 import { AuthGuard } from '../../auth/auth.guard';
 import VerifyTotpEntity from './dto/verify-totp.entity';
 
 @Controller({
-  path: 'account/two-factor',
+  path: 'account/multi-factor',
   version: '1',
 })
-export class TwoFactorController {
-  constructor(private readonly twoFactorService: TwoFactorService) {}
+export class MfaController {
+  constructor(private readonly multiFactorService: MultiFactorService) {}
 
   @Post('totp')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
   public configureTOTP(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.twoFactorService.configureTOTP(session);
+    return this.multiFactorService.configureTOTP(session);
   }
 
   @Patch('totp')
@@ -39,7 +39,7 @@ export class TwoFactorController {
     @Body() body: VerifyTotpEntity,
   ) {
     const session: SessionEntity = (request as any).session;
-    return this.twoFactorService.verifyTOTP(session, body.digit);
+    return this.multiFactorService.verifyTOTP(session, body.digit);
   }
 
   @Post('phone')
@@ -47,6 +47,6 @@ export class TwoFactorController {
   @HttpCode(HttpStatus.CREATED)
   public configurePhone(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.twoFactorService.configureTOTP(session);
+    return this.multiFactorService.configureTOTP(session);
   }
 }
