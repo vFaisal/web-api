@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   PayloadTooLargeException,
@@ -10,8 +11,13 @@ import { AccountEntity } from './entities/account.entity';
 import { MultipartFile } from '@fastify/multipart';
 import R2Service from '../core/providers/r2.service';
 import { nanoid } from 'nanoid';
-import { generateNanoId } from '../core/utils/util';
+import { generateNanoId, unixTimestamp } from '../core/utils/util';
 import SessionEntity from '../auth/entities/session.entity';
+import TwilioService, {
+  VerificationChannel,
+} from '../core/providers/twilio.service';
+import RedisService from '../core/providers/redis.service';
+import PhoneVerificationService from '../core/services/phone-verification.service';
 
 @Injectable()
 export class AccountService {
@@ -20,6 +26,9 @@ export class AccountService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
+    private readonly kv: RedisService,
+    private readonly twilioService: TwilioService,
+    private readonly phoneVerificationService: PhoneVerificationService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {
@@ -97,5 +106,112 @@ export class AccountService {
         },
       });
     }
+  }
+
+  public async startPhoneVerification(
+    session: SessionEntity,
+    internationalPhoneNumber: string,
+    channel: VerificationChannel,
+  ) {
+    const parsedPhoneNumber = await this.twilioService.validatePhoneNumber(
+      internationalPhoneNumber,
+    );
+    if (!parsedPhoneNumber.valid)
+      throw new BadRequestException({
+        code: 'invalid_phone_number',
+        message:
+          'The phone number provided is invalid. Please ensure you have entered a valid phone number and try again.',
+      });
+
+    const phoneNumber = internationalPhoneNumber.replace(
+      '+' + parsedPhoneNumber.calling_country_code,
+      '',
+    );
+
+    const phoneNumberLinked = await this.prisma.account.findUnique({
+      where: {
+        phoneCountryCode_phoneNumber: {
+          phoneNumber: phoneNumber,
+          phoneCountryCode: parsedPhoneNumber.calling_country_code,
+        },
+      },
+    });
+    if (phoneNumberLinked)
+      throw new BadRequestException({
+        code: 'phone_number_already_linked',
+        message:
+          'The phone number provided is already associated with another account. Please use a different phone number or contact support for further assistance.',
+      });
+
+    /*    await this.prisma.account.updateMany({
+          data: {
+            phoneNumber: phoneNumber,
+            phoneCountryCode: parsedPhoneNumber.calling_country_code,
+            phoneVerifiedAt: null,
+          },
+          where: {
+            id: session.getAccount().id,
+          },
+        });*/
+
+    const verificationToken = await this.phoneVerificationService.start(
+      session.getAccount().id,
+      {
+        number: phoneNumber,
+        countryCallingCode: parsedPhoneNumber.calling_country_code,
+      },
+      channel,
+    );
+
+    return {
+      phone: {
+        countryCode: parsedPhoneNumber.country_code,
+        countryCallingCode: parsedPhoneNumber.calling_country_code,
+        nationalNumber: parsedPhoneNumber.phone_number.replace(' ', ''),
+      },
+      token: verificationToken,
+      timestampExpires: unixTimestamp(
+        PhoneVerificationService.VERIFICATION_EXPIRATION,
+      ),
+    };
+  }
+
+  public async verifyPhone(
+    session: SessionEntity,
+    internationalPhoneNumber: string,
+    token: string,
+    code: string,
+  ) {
+    const verification = await this.phoneVerificationService.verify(
+      internationalPhoneNumber,
+      session.getAccount().id,
+      token,
+      code,
+    );
+
+    await this.prisma.account.updateMany({
+      data: {
+        phoneNumber: verification.cache.phone.number,
+        phoneCountryCode: verification.cache.phone.countryCallingCode,
+        phoneVerifiedAt: new Date(),
+      },
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+  }
+
+  public async resendPhoneVerification(
+    session: SessionEntity,
+    internationalPhoneNumber: string,
+    token: string,
+    channel: VerificationChannel,
+  ) {
+    await this.phoneVerificationService.resend(
+      internationalPhoneNumber,
+      session.getAccount().id,
+      token,
+      channel,
+    );
   }
 }

@@ -66,7 +66,7 @@ export default class TwilioService {
 
   public async createNewVerification(
     phoneNumber: string,
-    channel: Channel,
+    channel: VerificationChannel,
     retry = false,
   ) {
     const res = await this.request('/Verifications', 'post', {
@@ -128,7 +128,7 @@ export default class TwilioService {
         VerificationSid: target,
       });
 
-    const res = await this.request('/Verifications', 'post', payload);
+    const res = await this.request('/VerificationCheck', 'post', payload);
 
     if (res.status != 200) {
       if (res.status === 429) return 'RATELIMIT';
@@ -150,7 +150,7 @@ export default class TwilioService {
       '/Verifications/' + phoneOrVerificationSid,
       'post',
       {
-        Status: 'cancel',
+        Status: 'canceled',
       },
     );
     if (res.status !== 200) {
@@ -165,7 +165,12 @@ export default class TwilioService {
     return true;
   }
 
-  public async validatePhoneNumber(phoneNumber: string): Promise<boolean> {
+  public async validatePhoneNumber(phoneNumber: string): Promise<{
+    phone_number: string;
+    calling_country_code: string;
+    country_code: string;
+    valid: boolean;
+  }> {
     const res = await fetch(
       TwilioService.LOOKUPS_API_BASE + '/PhoneNumbers/' + phoneNumber,
       {
@@ -182,8 +187,12 @@ export default class TwilioService {
       );
       throw new ServiceUnavailableException();
     }
-    return data.valid;
+    return data;
   }
 }
 
-export type Channel = 'sms' | 'whatsapp' | 'voice';
+export enum VerificationChannel {
+  SMS = 'sms',
+  WHATSAPP = 'whatsapp',
+  CALL = 'voice',
+}

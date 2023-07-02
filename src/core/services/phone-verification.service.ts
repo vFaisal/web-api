@@ -7,7 +7,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import RedisService from '../providers/redis.service';
-import TwilioService, { Channel } from '../providers/twilio.service';
+import TwilioService, {
+  VerificationChannel,
+} from '../providers/twilio.service';
 import { generateNanoId } from '../utils/util';
 
 @Injectable()
@@ -19,15 +21,24 @@ export default class PhoneVerificationService {
 
   private readonly logger: Logger = new Logger('PhoneVerificationService');
 
-  private static readonly VERIFICATION_EXPIRATION = 60 * 10;
+  public static readonly VERIFICATION_EXPIRATION = 60 * 10;
 
   private cacheKey(phoneNumber: string) {
     return 'phoneVerification:' + phoneNumber;
   }
 
-  public async start(accountId: bigint, phoneNumber: string, channel: Channel) {
+  public async start(
+    accountId: bigint,
+    phone: {
+      countryCallingCode: string;
+      number: string;
+    },
+    channel: VerificationChannel,
+  ) {
+    const fullPhoneNumber = '+' + phone.countryCallingCode + phone.number;
+
     const cachedVerificationProcess: PhoneVerificationCache = await this.kv.get(
-      this.cacheKey(phoneNumber),
+      this.cacheKey(fullPhoneNumber),
     );
 
     /**
@@ -47,18 +58,19 @@ export default class PhoneVerificationService {
     }
 
     const verification = await this.twilioService.createNewVerification(
-      phoneNumber,
+      fullPhoneNumber,
       channel,
     );
 
     const token = generateNanoId();
 
     await this.kv.setex(
-      this.cacheKey(phoneNumber),
+      this.cacheKey(fullPhoneNumber),
       PhoneVerificationService.VERIFICATION_EXPIRATION,
       {
         sid: verification.sid,
         token: token,
+        phone,
         accountId: String(accountId),
       } satisfies PhoneVerificationCache,
     );
@@ -69,7 +81,7 @@ export default class PhoneVerificationService {
     phoneNumber: string,
     accountId: bigint,
     token: string,
-    channel: Channel,
+    channel: VerificationChannel,
   ) {
     const verification = await this.getSessionWithVerify(
       phoneNumber,
@@ -107,11 +119,15 @@ export default class PhoneVerificationService {
     token: string,
     code: string,
   ) {
-    await this.getSessionWithVerify(phoneNumber, token, accountId);
+    const verification = await this.getSessionWithVerify(
+      phoneNumber,
+      token,
+      accountId,
+    );
 
     const check = await this.twilioService.checkVerification(
       'verificationSid',
-      phoneNumber,
+      verification.cache.sid,
       code,
     );
 
@@ -135,13 +151,14 @@ export default class PhoneVerificationService {
         429,
       );
     }
+    return verification;
   }
 
   private async getSessionWithVerify(
     phoneNumber: string,
     token: string,
     accountId: bigint,
-  ) {
+  ): Promise<{ cache: PhoneVerificationCache; send_code_attempts: any[] }> {
     const cachedVerificationProcess: PhoneVerificationCache = await this.kv.get(
       this.cacheKey(phoneNumber),
     );
@@ -174,12 +191,16 @@ export default class PhoneVerificationService {
           'The phone verification token provided is not valid. Please verify the token and try again.',
       });
     }
-    return verification;
+    return { ...verification, cache: cachedVerificationProcess };
   }
 }
 
 interface PhoneVerificationCache {
   sid: string;
   token: string;
+  phone: {
+    countryCallingCode: string;
+    number: string;
+  };
   accountId: string;
 }
