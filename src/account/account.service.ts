@@ -194,6 +194,8 @@ export class AccountService {
         phoneNumber: verification.cache.phone.number,
         phoneCountryCode: verification.cache.phone.countryCallingCode,
         phoneVerifiedAt: new Date(),
+        mfaSMS: null,
+        mfaWhatsapp: null,
       },
       where: {
         id: session.getAccount().id,

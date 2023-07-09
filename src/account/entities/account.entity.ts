@@ -59,37 +59,38 @@ export class AccountEntity {
 
   @Expose()
   public get verified() {
-    const verified = [];
-    if (this.raw.account.emailVerifiedAt) verified.push('EMAIL');
-    if (this.havePhoneNumber() && this.raw.account.phoneVerifiedAt)
-      verified.push('PHONE');
-    return verified /*{
+    /*    const verified: Array<'EMAIL' | 'PHONE'> = [];
+        if (this.raw.account.emailVerifiedAt) verified.push('EMAIL');
+        if (this.havePhoneNumber() && this.raw.account.phoneVerifiedAt)
+          verified.push('PHONE');*/
+    return {
       email: !!this.raw.account.emailVerifiedAt,
-      phone: !!(this.havePhoneNumber() && this.raw.account.phoneVerifiedAt)
-    }*/;
+      phone: !!(this.havePhoneNumber() && this.raw.account.phoneVerifiedAt),
+    };
   }
 
   @Expose()
-  public get twoFactor() {
-    const methods: Array<'EMAIL' | 'SMS' | 'WHATSAPP' | 'APP'> = [];
-    if (this.raw.account.mfaEmail && this.raw.account.emailVerifiedAt)
-      methods.push('EMAIL');
-    if (
-      this.raw.account.mfaSMS &&
-      this.raw.account.phoneVerifiedAt &&
-      this.havePhoneNumber()
-    )
-      methods.push('SMS');
-    if (this.raw.account.mfaSMS) methods.push('WHATSAPP');
-    if (this.raw.account.mfaAppKey) methods.push('APP');
+  public get multiFactor() {
+    /*    const methods: Array<'EMAIL' | 'SMS' | 'WHATSAPP' | 'APP'> = [];
+        if (this.raw.account.mfaEmail && this.raw.account.emailVerifiedAt)
+          methods.push('EMAIL');
+        if (
+          this.raw.account.mfaSMS &&
+          this.raw.account.phoneVerifiedAt &&
+          this.havePhoneNumber()
+        )
+          methods.push('SMS');
+        if (this.raw.account.mfaWhatsapp) methods.push('WHATSAPP');
+        if (this.raw.account.mfaAppKey) methods.push('APP');*/
+    const isAppEnabled = !!this.raw.account.mfaAppKey;
     return {
-      configured: methods.length > 0,
-      methods /*: {
-        email: !!(!!this.raw.account.twoFactorAuthEmail && !!this.raw.account.emailVerifiedAt),
-        sms: !!(!!this.raw.account.twoFactorAuthSMS && !!this.raw.account.phoneVerifiedAt && !!this.havePhoneNumber()),
-        whatsapp: !!this.raw.account.twoFactorAuthWhatsapp,
-        authenticationApp: !!this.raw.account.twoFactorAuthAppKey
-      }*/,
+      configured: this.isMFAEnabled(),
+      methods: {
+        email: this.isMFAEmailEnabled(),
+        sms: this.isMFASMSEnabled(),
+        whatsapp: this.isMFAWhatsappEnabled(),
+        app: this.isMFAAppEnabled(),
+      },
     };
   }
 
@@ -105,5 +106,40 @@ export class AccountEntity {
 
   private havePhoneNumber() {
     return this.raw.account.phoneNumber && this.raw.account.phoneCountryCode;
+  }
+
+  private isMFAEmailEnabled() {
+    return !!(
+      !!this.raw.account.mfaEmail && !!this.raw.account.emailVerifiedAt
+    );
+  }
+
+  private isMFASMSEnabled() {
+    return !!(
+      !!this.raw.account.mfaSMS &&
+      !!this.raw.account.phoneVerifiedAt &&
+      !!this.havePhoneNumber()
+    );
+  }
+
+  private isMFAWhatsappEnabled() {
+    return !!(
+      !!this.raw.account.mfaWhatsapp &&
+      !!this.raw.account.phoneVerifiedAt &&
+      !!this.havePhoneNumber()
+    );
+  }
+
+  private isMFAAppEnabled() {
+    return !!this.raw.account.mfaAppKey;
+  }
+
+  public isMFAEnabled() {
+    return (
+      this.isMFAEmailEnabled() ||
+      this.isMFASMSEnabled() ||
+      this.isMFAWhatsappEnabled() ||
+      this.isMFAAppEnabled()
+    );
   }
 }

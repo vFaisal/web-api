@@ -28,85 +28,183 @@ export class MultiFactorService {
     private readonly accountService: AccountService,
     private readonly kv: RedisService,
     private readonly prisma: PrismaService,
-    private readonly phoneVerificationService: PhoneVerificationService,
-    private readonly twilioService: TwilioService,
   ) {}
 
-  /*  public async configureSMS(session: SessionEntity) {
-      const account = await this.accountService.getSafeAccountData(
-        session.getAccount().id,
-      );
-      if (account.twoFactor.methods.includes('SMS'))
-        throw new BadRequestException({
-          code: '2fa_sms_already_enabled',
-          message:
-            'Two-Factor Authentication (2FA) using SMS verification is already enabled for this account. No further action is required.',
-        });
-  
-      const fullPhoneNumber =
-        '+' + String(phoneCountryCode) + String(phoneNumber);
-      const phoneNumberIsValid = await this.twilioService.validatePhoneNumber(
-        fullPhoneNumber,
-      );
-      if (!phoneNumberIsValid)
-        throw new BadRequestException({
-          code: 'invalid_phone_number',
-          message:
-            'The phone number provided is invalid. Please ensure you have entered a valid phone number and try again.',
-        });
-  
-      const phoneNumberLinked = await this.prisma.account.findFirst({
-        where: {
-          phoneNumber: phoneNumber,
-          phoneCountryCode: phoneCountryCode,
-        },
+  public async enableEmail(session: SessionEntity) {
+    const account = await this.accountService.getSafeAccountData(
+      session.getAccount().id,
+    );
+    if (account.multiFactor.methods.email)
+      throw new BadRequestException({
+        code: 'mfa_email_already_enabled',
+        message:
+          'Multi-Factor Authentication (MFA) via Email is already enabled for this account. No further action is required.',
       });
-      if (phoneNumberLinked)
-        throw new BadRequestException({
-          code: 'phone_number_already_linked',
-          message:
-            'The phone number provided is already associated with another account. Please use a different phone number or contact support for further assistance.',
-        });
-  
-      const verificationToken = await this.phoneVerificationService.start(
-        account.raw.account.id,
-        fullPhoneNumber,
-        'sms',
-      );
-  
-      await this.kv.setex(
-        `sms_2fa_configuration:${account.id}`,
-        MultiFactorService.VERIFICATION_EXPIRES,
-        {
-          token: verificationToken,
-        },
-      );
-  
-      return {
-        phone: {
-          countryCode: phoneCountryCode,
-          number: phoneNumber,
-        },
-        expires: unixTimestamp(MultiFactorService.VERIFICATION_EXPIRES),
-      };
-    }*/
+
+    if (!account.verified.email)
+      throw new BadRequestException({
+        code: 'mfa_email_requires_verified_email',
+        message:
+          'Email verification is required to enable Email-based Multi-Factor Authentication (MFA). Please verify your email before proceeding.',
+      });
+
+    await this.prisma.account.updateMany({
+      data: {
+        mfaEmail: new Date(),
+      },
+      where: {
+        id: account.raw.account.id,
+      },
+    });
+
+    return;
+  }
+
+  public async disableEmail(session: SessionEntity) {
+    const account = await this.accountService.getSafeAccountData(
+      session.getAccount().id,
+    );
+    if (!account.multiFactor.methods.email)
+      throw new BadRequestException({
+        code: 'mfa_email_already_disabled',
+        message:
+          'Multi-Factor Authentication (MFA) via Email is already disabled for this account. No further action is required.',
+      });
+
+    await this.prisma.account.updateMany({
+      data: {
+        mfaEmail: null,
+      },
+      where: {
+        id: account.raw.account.id,
+      },
+    });
+
+    return;
+  }
+
+  public async enableSMS(session: SessionEntity) {
+    const account = await this.accountService.getSafeAccountData(
+      session.getAccount().id,
+    );
+    if (account.multiFactor.methods.sms)
+      throw new BadRequestException({
+        code: 'mfa_sms_already_enabled',
+        message:
+          'Multi-Factor Authentication (MFA) via SMS is already enabled for this account. No further action is required.',
+      });
+
+    if (!account.verified.phone)
+      throw new BadRequestException({
+        code: 'mfa_sms_requires_verified_phone_number',
+        message:
+          'Phone number verification is required to enable SMS-based Multi-Factor Authentication (MFA). Please verify your phone number before proceeding.',
+      });
+
+    await this.prisma.account.updateMany({
+      data: {
+        mfaSMS: new Date(),
+      },
+      where: {
+        id: account.raw.account.id,
+      },
+    });
+
+    return;
+  }
+
+  public async disableSMS(session: SessionEntity) {
+    const account = await this.accountService.getSafeAccountData(
+      session.getAccount().id,
+    );
+    if (!account.multiFactor.methods.sms)
+      throw new BadRequestException({
+        code: 'mfa_sms_already_disabled',
+        message:
+          'Multi-Factor Authentication (MFA) via SMS is already disabled for this account. No further action is required.',
+      });
+
+    await this.prisma.account.updateMany({
+      data: {
+        mfaSMS: null,
+      },
+      where: {
+        id: account.raw.account.id,
+      },
+    });
+
+    return;
+  }
+
+  public async enableWhatsapp(session: SessionEntity) {
+    const account = await this.accountService.getSafeAccountData(
+      session.getAccount().id,
+    );
+    if (account.multiFactor.methods.whatsapp)
+      throw new BadRequestException({
+        code: 'mfa_whatsapp_already_enabled',
+        message:
+          'Multi-Factor Authentication (MFA) via Whatsapp is already disabled for this account. No further action is required.',
+      });
+
+    if (!account.verified.phone)
+      throw new BadRequestException({
+        code: 'mfa_whatsapp_requires_verified_phone_number',
+        message:
+          'Phone number verification is required to enable Whatsapp-based Multi-Factor Authentication (MFA). Please verify your phone number before proceeding.',
+      });
+
+    await this.prisma.account.updateMany({
+      data: {
+        mfaWhatsapp: new Date(),
+      },
+      where: {
+        id: account.raw.account.id,
+      },
+    });
+
+    return;
+  }
+
+  public async disableWhatsapp(session: SessionEntity) {
+    const account = await this.accountService.getSafeAccountData(
+      session.getAccount().id,
+    );
+    if (!account.multiFactor.methods.whatsapp)
+      throw new BadRequestException({
+        code: 'mfa_whatsapp_already_disabled',
+        message:
+          'Multi-Factor Authentication (MFA) via disabled verification is already disabled for this account. No further action is required.',
+      });
+
+    await this.prisma.account.updateMany({
+      data: {
+        mfaWhatsapp: null,
+      },
+      where: {
+        id: account.raw.account.id,
+      },
+    });
+
+    return;
+  }
 
   public async configureTOTP(session: SessionEntity) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
-    if (account.twoFactor.methods.includes('APP'))
+    if (account.multiFactor.methods.app)
       throw new BadRequestException({
-        code: '2fa_authentication_app_already_enabled',
+        code: 'mfa_authentication_app_already_enabled',
         message:
-          'The Two-Factor Authentication (2FA) authentication app is already enabled for this account. Please disable the current 2FA app before attempting to enable a new one.',
+          'Multi-Factor Authentication (MFA) authentication app is already enabled for this account. Please disable the current MFA app before attempting to enable a new one.',
       });
 
     const key = generateNanoId(16);
     const secret = this.createTOTPSecret(key);
 
     await this.kv.setex(
-      `totp_2fa_configuration:${account.id}`,
+      `totp_mfa_configuration:${account.id}`,
       MultiFactorService.VERIFICATION_EXPIRES,
       key,
     );
@@ -121,33 +219,33 @@ export class MultiFactorService {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
-    if (account.twoFactor.methods.includes('APP'))
+    if (account.multiFactor.methods.app)
       throw new BadRequestException({
-        code: '2fa_authentication_app_already_enabled',
+        code: 'mfa_authentication_app_already_enabled',
         message:
-          'The Two-Factor Authentication (2FA) authentication app is already enabled for this account. Please disable the current 2FA app before attempting to enable a new one.',
+          'The Multi-Factor Authentication (MFA) authentication app is already enabled for this account. Please disable the current MFA app before attempting to enable a new one.',
       });
 
     const key: string = await this.kv.get(
-      `totp_2fa_configuration:${account.id}`,
+      `totp_mfa_configuration:${account.id}`,
     );
     if (!key)
       throw new BadRequestException({
-        code: '2fa_authentication_app_new_configuration_required',
+        code: 'mfa_authentication_app_new_configuration_required',
         message:
-          'A new configuration for the Two-Factor Authentication (2FA) authentication app is required. Please generate a new configuration to enable the 2FA app.',
+          'A new configuration for the Multi-Factor Authentication (MFA) authentication app is required. Please generate a new configuration to enable the MFA app.',
       });
 
     const generatedDigit = this.generateTOTP(this.createTOTPSecret(key));
 
     if (generatedDigit !== digit)
       throw new BadRequestException({
-        code: '2fa_authentication_app_configuration_invalid_code',
+        code: 'mfa_authentication_app_configuration_invalid_code',
         message:
-          'The provided configuration code for the Two-Factor Authentication (2FA) authentication app is incorrect. Please ensure you have entered the correct code and try again.',
+          'The provided configuration code for the Multi-Factor Authentication (MFA) authentication app is incorrect. Please ensure you have entered the correct code and try again.',
       });
 
-    await this.kv.del(`totp_2fa_configuration:${account.id}`);
+    await this.kv.del(`totp_mfa_configuration:${account.id}`);
 
     await this.prisma.account.updateMany({
       data: {
@@ -163,12 +261,23 @@ export class MultiFactorService {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
-    if (!account.twoFactor.methods.includes('APP'))
+    if (!account.multiFactor.methods.app)
       throw new BadRequestException({
-        code: '2fa_authentication_app_already_disabled',
+        code: 'mfa_authentication_app_already_disabled',
         message:
-          'The Two-Factor Authentication (2FA) authentication app is already disabled for this account.',
+          'Multi-Factor Authentication (MFA) via App is already disabled for this account. No further action is required.',
       });
+
+    await this.prisma.account.updateMany({
+      data: {
+        mfaAppKey: null,
+      },
+      where: {
+        id: account.raw.account.id,
+      },
+    });
+
+    return;
   }
 
   private createTOTPSecret(key: string) {
@@ -216,4 +325,9 @@ export class MultiFactorService {
       MultiFactorService.ISSUER
     }:${displayName}?${params.toString()}`;
   }
+}
+
+interface TOTPConfiguration {
+  key: string;
+  backupCodes: string[];
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -25,7 +26,7 @@ export class MfaController {
 
   @Post('totp')
   @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.OK)
   public configureTOTP(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
     return this.multiFactorService.configureTOTP(session);
@@ -33,7 +34,7 @@ export class MfaController {
 
   @Patch('totp')
   @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.NO_CONTENT)
   public verifyTOTP(
     @Req() request: FastifyRequest,
     @Body() body: VerifyTotpEntity,
@@ -42,11 +43,59 @@ export class MfaController {
     return this.multiFactorService.verifyTOTP(session, body.digit);
   }
 
-  @Post('phone')
+  @Delete('totp')
   @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.CREATED)
-  public configurePhone(@Req() request: FastifyRequest) {
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public disableTOTP(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.configureTOTP(session);
+    return this.multiFactorService.disableTOTP(session);
+  }
+
+  @Post('sms')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public enableSMS(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.multiFactorService.enableSMS(session);
+  }
+
+  @Delete('sms')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public disableSMS(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.multiFactorService.disableSMS(session);
+  }
+
+  @Post('whatsapp')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public enableWhatsapp(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.multiFactorService.enableWhatsapp(session);
+  }
+
+  @Delete('whatsapp')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public disableWhatsapp(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.multiFactorService.disableEmail(session);
+  }
+
+  @Post('email')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public enableEmail(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.multiFactorService.enableEmail(session);
+  }
+
+  @Delete('email')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public disableEmail(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.multiFactorService.disableEmail(session);
   }
 }
