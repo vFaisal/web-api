@@ -11,7 +11,7 @@ import {
   SignificantRequestInformation,
 } from '../core/utils/util';
 import { argon2id, hash } from 'argon2';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { Prisma } from '@prisma/client';
 import { AuthService } from '../auth/auth.service';
 import { SessionType } from '@prisma/client';
 import OneTimePasswordEntity from './verification/entities/one-time-password.entity';
@@ -62,7 +62,7 @@ export class RegistrationService {
           publicId: generateNanoId(),
         },
       })
-      .catch((err: PrismaClientKnownRequestError) => {
+      .catch((err: Prisma.PrismaClientKnownRequestError) => {
         if (err.code == 'P2002')
           throw new ConflictException({
             code: 'email_already_registered',

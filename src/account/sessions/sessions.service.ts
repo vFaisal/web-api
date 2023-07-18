@@ -8,7 +8,7 @@ import {
 import SessionEntity from '../../auth/entities/session.entity';
 import { PrismaService } from '../../core/providers/prisma.service';
 import TrustedAccountSessionEntity from './entities/trusted-account-session.entity';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { Prisma } from '@prisma/client';
 import RedisService from '../../core/providers/redis.service';
 import { unixTimestamp } from '../../core/utils/util';
 import { AuthService } from '../../auth/auth.service';
@@ -143,7 +143,7 @@ export class SessionsService {
           },
         },
       })
-      .catch((err: PrismaClientKnownRequestError) => {
+      .catch((err: Prisma.PrismaClientKnownRequestError) => {
         if (err.code === 'P2025')
           throw new BadRequestException({
             code: 'session_not_exist',

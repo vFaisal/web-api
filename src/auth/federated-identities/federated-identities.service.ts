@@ -15,7 +15,7 @@ import {
 } from '../../core/utils/util';
 import { AuthService } from '../auth.service';
 import FederatedIdentityRegistrationEntity from './entities/federated-identity-registration.entity';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { Prisma } from '@prisma/client';
 import { AccountEntity } from '../../account/entities/account.entity';
 import RedisService from '../../core/providers/redis.service';
 import { JwtService } from '@nestjs/jwt';
@@ -152,7 +152,7 @@ export class FederatedIdentitiesService {
           federatedIdentities: true,
         },
       })
-      .catch((err: PrismaClientKnownRequestError) => {
+      .catch((err: Prisma.PrismaClientKnownRequestError) => {
         if (err.code == 'P2002')
           throw new ConflictException({
             code: 'email_already_registered',
