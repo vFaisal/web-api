@@ -23,7 +23,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
   async onModuleInit() {
     await this.$connect();
-    this.$queryRaw`SET @@boost_cached_queries = true`;
+    this.$queryRaw`SET @@boost_cached_queries = true;`;
   }
 
   async enableShutdownHooks(app: INestApplication) {

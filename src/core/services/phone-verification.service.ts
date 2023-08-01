@@ -11,12 +11,14 @@ import TwilioService, {
   VerificationChannel,
 } from '../providers/twilio.service';
 import { generateNanoId } from '../utils/util';
+import ThrottlerService from '../security/throttler.service';
 
 @Injectable()
 export default class PhoneVerificationService {
   constructor(
     private readonly kv: RedisService,
     private readonly twilioService: TwilioService,
+    private readonly throttler: ThrottlerService,
   ) {}
 
   private readonly logger: Logger = new Logger('PhoneVerificationService');
@@ -44,6 +46,19 @@ export default class PhoneVerificationService {
     /**
      * Add rate limit for every phone number e.g. 2 verification every 2 mins && 5 verification every 10 mins
      */
+    await this.throttler.throwIfRateLimited(
+      'phoneVerificationService:account' + accountId,
+      10 * 60,
+      2,
+      'data',
+    );
+
+    await this.throttler.throwIfRateLimited(
+      'phoneVerificationService:number:' + fullPhoneNumber,
+      20 * 60,
+      5,
+      'data',
+    );
 
     if (cachedVerificationProcess) {
       if (accountId !== BigInt(cachedVerificationProcess.accountId))
