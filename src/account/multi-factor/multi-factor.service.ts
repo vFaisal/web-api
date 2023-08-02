@@ -140,6 +140,14 @@ export class MultiFactorService {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
+
+    if (!account.multiFactor.methods.sms)
+      throw new BadRequestException({
+        code: 'mfa_whatsapp_requires_sms',
+        message:
+          'Multi-Factor Authentication (MFA) via WhatsApp requires SMS MFA to be enabled.',
+      });
+
     if (account.multiFactor.methods.whatsapp)
       throw new BadRequestException({
         code: 'mfa_whatsapp_already_enabled',

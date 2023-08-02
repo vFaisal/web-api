@@ -123,11 +123,7 @@ export class AccountEntity {
   }
 
   private isMFAWhatsappEnabled() {
-    return !!(
-      !!this.raw.account.mfaWhatsapp &&
-      !!this.raw.account.phoneVerifiedAt &&
-      !!this.havePhoneNumber()
-    );
+    return !!(!!this.raw.account.mfaWhatsapp && this.isMFASMSEnabled());
   }
 
   private isMFAAppEnabled() {

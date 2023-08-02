@@ -80,7 +80,7 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableWhatsapp(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.disableEmail(session);
+    return this.multiFactorService.disableWhatsapp(session);
   }
 
   @Post('email')
