@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -9,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { argon2id, verify } from 'argon2';
 import {
   generateNanoId,
+  hideEmail,
   SignificantRequestInformation,
   unixTimestamp,
 } from '../core/utils/util';
@@ -17,6 +19,8 @@ import { ConfigService } from '@nestjs/config';
 import SessionEntity from './entities/session.entity';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import RedisService from '../core/providers/redis.service';
+import { AccountEntity } from '../account/entities/account.entity';
+import { MultiFactorLogin } from './multi-factor/multi-factor.service';
 
 @Injectable()
 export class AuthService {
@@ -24,14 +28,15 @@ export class AuthService {
   public static readonly EXPIRATION = {
     ACCESS_TOKEN: 60 * 60, // 1h (Seconds)
     REFRESH_TOKEN: 60 * 60 * 24 * 14, // 14 Days (Seconds)
+    MFA_VERIFY_TOKEN: 10 * 60, // 10m (Seconds)
   };
 
   constructor(
-    private jwtService: JwtService,
-    private prisma: PrismaService,
-    private jwt: JwtService,
-    private config: ConfigService,
-    private kv: RedisService,
+    private readonly jwtService: JwtService,
+    private readonly prisma: PrismaService,
+    private readonly jwt: JwtService,
+    private readonly config: ConfigService,
+    private readonly kv: RedisService,
   ) {}
 
   public async authenticate(
@@ -39,22 +44,22 @@ export class AuthService {
     password: string,
     significantRequestInformation: SignificantRequestInformation,
   ) {
-    const user = await this.prisma.account.findUnique({
+    const account = await this.prisma.account.findUnique({
       where: {
         email,
       },
     });
-    if (!user)
+    if (!account)
       throw new BadRequestException('Email address not registered yet');
 
-    const isVerifiedPassword = await verify(user.passwordHash, password, {
+    const isVerifiedPassword = await verify(account.passwordHash, password, {
       version: argon2id,
     });
     if (!isVerifiedPassword)
       throw new BadRequestException('The credentials are invalid');
 
     return this.createCredentials(
-      user,
+      account,
       significantRequestInformation,
       SessionType.EMAIL,
     );
@@ -107,15 +112,50 @@ export class AuthService {
   public async createCredentials(
     account: Account,
     significantRequestInformation: SignificantRequestInformation,
-    target: SessionType,
+    sessionType: SessionType,
+    force = false,
   ) {
+    const safeAccountData = new AccountEntity(account);
+    if (safeAccountData.isMFAEnabled() && !force) {
+      const token = generateNanoId();
+      await this.kv.setex<MultiFactorLogin>(
+        `MFALogin:${token}`,
+        unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
+        {
+          accountId: String(safeAccountData.raw.account.id),
+          uses: 0,
+          sessionType: sessionType,
+        },
+      );
+      return {
+        type: 'mfa_required',
+        data: {
+          email: safeAccountData.isMFAEmailEnabled()
+            ? {
+                target: hideEmail(safeAccountData.email),
+              }
+            : null,
+          phone: safeAccountData.isMFASMSEnabled()
+            ? safeAccountData.getPhoneWithHide()
+            : null,
+        },
+        methods: {
+          email: safeAccountData.isMFAEmailEnabled(),
+          sms: safeAccountData.isMFASMSEnabled(),
+          whatsapp: safeAccountData.isMFAWhatsappEnabled(),
+          totp: safeAccountData.isMFAAppEnabled(),
+        },
+        token: token,
+        expires: unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
+      };
+    }
     const jwt = await this.createJWT(account.publicId);
 
     const primarySessionId = generateNanoId();
     //Add refresh token to database;
     const session = await this.prisma.accountSession.create({
       data: {
-        type: target,
+        type: sessionType,
         publicId: primarySessionId,
         accountId: account.id,
         tokens: {
@@ -152,7 +192,9 @@ export class AuthService {
     );
 
     return {
+      type: 'credentials',
       accessToken: jwt.accessToken,
+      expiresIn: unixTimestamp(AuthService.EXPIRATION.ACCESS_TOKEN),
       refreshToken: jwt.refreshToken,
     };
   }

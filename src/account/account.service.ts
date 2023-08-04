@@ -170,9 +170,7 @@ export class AccountService {
         nationalNumber: parsedPhoneNumber.phone_number.replace(' ', ''),
       },
       token: verificationToken,
-      timestampExpires: unixTimestamp(
-        PhoneVerificationService.VERIFICATION_EXPIRATION,
-      ),
+      expires: unixTimestamp(PhoneVerificationService.VERIFICATION_EXPIRATION),
     };
   }
 

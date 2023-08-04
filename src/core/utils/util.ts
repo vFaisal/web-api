@@ -95,3 +95,21 @@ export function base32Decode(encoded: any) {
 
   return buffer;
 }
+
+export function hideEmail(email: string) {
+  const split = email.split('@');
+
+  const partOne =
+    split[0].length >= 3 ? split[0].slice(0, 3) + '**' : split[0] + '**';
+  const domain = split[1].split('.');
+  const partTwo = domain[0].slice(0, 1) + '****';
+  const partThree = domain[1];
+  return partOne + '@' + partTwo + '.' + partThree;
+}
+
+export function hidePhone(phoneNumber) {
+  const visiblePart = phoneNumber.slice(-4);
+  const hiddenPart = '*'.repeat(phoneNumber.length - 4);
+
+  return hiddenPart + visiblePart;
+}

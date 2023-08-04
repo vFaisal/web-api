@@ -1,6 +1,7 @@
 import { Exclude, Expose } from 'class-transformer';
 import { Account, AccountFederatedIdentities, Provider } from '@prisma/client';
 import R2Service from '../../core/providers/r2.service';
+import { hidePhone } from '../../core/utils/util';
 
 export class AccountEntity {
   @Exclude()
@@ -57,6 +58,16 @@ export class AccountEntity {
       : null;
   }
 
+  public getPhoneWithHide() {
+    if (!this.havePhoneNumber()) return null;
+    const hideNumber = hidePhone(this.raw.account.phoneNumber);
+    return {
+      prefix: '+' + this.raw.account.phoneCountryCode,
+      number: hideNumber,
+      full: '+' + this.raw.account.phoneCountryCode + hideNumber,
+    };
+  }
+
   @Expose()
   public get verified() {
     /*    const verified: Array<'EMAIL' | 'PHONE'> = [];
@@ -105,16 +116,18 @@ export class AccountEntity {
   }
 
   private havePhoneNumber() {
-    return this.raw.account.phoneNumber && this.raw.account.phoneCountryCode;
+    return (
+      !!this.raw.account.phoneNumber && !!this.raw.account.phoneCountryCode
+    );
   }
 
-  private isMFAEmailEnabled() {
+  public isMFAEmailEnabled() {
     return !!(
       !!this.raw.account.mfaEmail && !!this.raw.account.emailVerifiedAt
     );
   }
 
-  private isMFASMSEnabled() {
+  public isMFASMSEnabled() {
     return !!(
       !!this.raw.account.mfaSMS &&
       !!this.raw.account.phoneVerifiedAt &&
@@ -122,11 +135,11 @@ export class AccountEntity {
     );
   }
 
-  private isMFAWhatsappEnabled() {
+  public isMFAWhatsappEnabled() {
     return !!(!!this.raw.account.mfaWhatsapp && this.isMFASMSEnabled());
   }
 
-  private isMFAAppEnabled() {
+  public isMFAAppEnabled() {
     return !!this.raw.account.mfaAppKey;
   }
 

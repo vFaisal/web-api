@@ -1,7 +1,5 @@
-import { Header, HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import RedisService from '../providers/redis.service';
-import Tokens from '@fastify/csrf';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export default class ThrottlerService {
@@ -18,7 +16,6 @@ export default class ThrottlerService {
     return false;
   }
 
-  @Header('Test', 'Test')
   public async throwIfRateLimited(
     key: string,
     ttl: number,

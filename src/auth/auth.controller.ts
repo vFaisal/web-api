@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Put,
   Req,
@@ -18,6 +19,7 @@ import { AuthGuard } from './auth.guard';
 import SessionEntity from './entities/session.entity';
 import { Recaptcha } from '../core/security/recaptch.decorator';
 import { FastifyRequest } from 'fastify';
+import ParseNanoidPipe from '../shared/pipes/parse-nanoid.pipe';
 
 @Controller({
   version: '1',
