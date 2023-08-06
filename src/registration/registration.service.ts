@@ -14,10 +14,8 @@ import { argon2id, hash } from 'argon2';
 import { Prisma } from '@prisma/client';
 import { AuthService } from '../auth/auth.service';
 import { SessionType } from '@prisma/client';
-import OneTimePasswordEntity from './verification/entities/one-time-password.entity';
 import { AccountEntity } from '../account/entities/account.entity';
 import RedisService from '../core/providers/redis.service';
-import RegistrationEntity from './entities/registration.entity';
 
 @Injectable()
 export class RegistrationService {
@@ -33,15 +31,11 @@ export class RegistrationService {
     params: RegistrationDto,
     significantRequestInformation: SignificantRequestInformation,
   ) {
-    const registration = new RegistrationEntity<'GET'>(
-      await this.kv.get(`registration:${params.signature}`),
+    const registration = await this.kv.get<RegistrationCache>(
+      `registration:${params.signature}`,
     );
 
-    if (
-      !registration.isValid() ||
-      registration.target !== 'EMAIL' ||
-      registration.phoneOrEmail !== params.email
-    )
+    if (!registration || registration.email !== params.email)
       throw new BadRequestException({
         code: 'invalid_signature',
         message:
@@ -55,7 +49,7 @@ export class RegistrationService {
         data: {
           countryCode: 'SA',
           emailVerifiedAt: new Date(),
-          email: registration.phoneOrEmail,
+          email: registration.email,
           passwordHash: await hash(params.password, {
             version: argon2id,
           }),
@@ -81,4 +75,8 @@ export class RegistrationService {
       ),
     };
   }
+}
+
+export interface RegistrationCache {
+  email: string;
 }

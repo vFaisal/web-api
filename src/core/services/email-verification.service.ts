@@ -9,10 +9,12 @@ import {
   BadRequestException,
   ForbiddenException,
   HttpException,
+  Injectable,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 
+@Injectable()
 export default class EmailVerificationService {
   public static readonly DEFAULT_ATTEMPTS: number = 5;
   public static readonly DEFAULT_RESEND: number = 2;
@@ -36,14 +38,15 @@ export default class EmailVerificationService {
       description: string;
       subject: string;
     },
-    accountId?: bigint,
+    {
+      accountId = null,
+      tokenLength = 16,
+    }: { accountId?: bigint | null; tokenLength?: number },
   ) {
     if (!message.description.includes('######')) {
       this.logger.debug('Message not contain ###### to processed', message);
       throw new ServiceUnavailableException();
     }
-
-    const cache = await this.kv.get('emailVerification:' + email);
 
     if (accountId)
       await this.throttler.throwIfRateLimited(
@@ -68,7 +71,7 @@ export default class EmailVerificationService {
     );
 
     const randomDigit = randomInt(100_000, 999_999);
-    const token = generateNanoId();
+    const token = generateNanoId(tokenLength ?? 16);
 
     await this.kv.setex<EmailVerificationCache>(
       'emailVerification:' + email,
