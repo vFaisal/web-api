@@ -20,7 +20,7 @@ export default class ThrottlerService {
     key: string,
     ttl: number,
     limit: number,
-    messageType: 'account' | 'data' | 'global',
+    messageType: 'account' | 'data' | 'global' | 'ip',
   ) {
     if (await this.isRateLimited(key, ttl, limit))
       throw new HttpException(
@@ -31,6 +31,8 @@ export default class ThrottlerService {
               ? 'The request rate for your account has reached its maximum limit. To maintain service stability and ensure equitable access for all users, kindly refrain from making further requests until the specified time has elapsed.'
               : messageType === 'data'
               ? 'Your request has been throttled due to exceeding the rate limit for one of the data fields in the request body. Please reduce the frequency of requests for this data field and try again after the specified duration.'
+              : messageType === 'ip'
+              ? 'our IP address has exceeded the rate limit for this service. Please reduce the frequency of requests from this IP and try again after the specified duration.'
               : 'Your request has been throttled due to exceeding the global maximum allowed request limit. To ensure fair usage and maintain service quality for all users, please reduce the frequency of your requests and try again after the specified duration.',
         },
         429,

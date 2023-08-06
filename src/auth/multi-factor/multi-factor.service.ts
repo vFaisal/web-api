@@ -15,7 +15,7 @@ import RedisService from '../../core/providers/redis.service';
 import { AuthService } from '../auth.service';
 import PhoneVerificationService from '../../core/services/phone-verification.service';
 import { VerificationChannel } from '../../core/providers/twilio.service';
-import { SessionType } from '@prisma/client';
+import { Account, SessionType } from '@prisma/client';
 import MultiFactorLoginStartVerificationDto, {
   AuthenticateMFAMethods,
 } from './dto/multi-factor-login-start-verification.dto';
@@ -28,6 +28,28 @@ export class MultiFactorService {
     private readonly phoneVerificationService: PhoneVerificationService,
     private readonly authService: AuthService,
   ) {}
+
+  private async createCredentials(
+    account: Account,
+    token: string,
+    significantRequestInformation: SignificantRequestInformation,
+    sessionType: SessionType,
+  ) {
+    const multiFactorLogin = await this.kv.del('MFALogin:' + token);
+    if (multiFactorLogin === 0)
+      throw new BadRequestException({
+        code: 'mfa_token_no_longer_valid',
+        message:
+          'The Multi-Factor Verification session is no longer valid. For security purposes, please log in again and initiate a new verification process.',
+      });
+
+    return this.authService.createCredentials(
+      account,
+      significantRequestInformation,
+      sessionType,
+      true,
+    );
+  }
 
   public async startVerification(
     token: string,
@@ -157,21 +179,12 @@ export class MultiFactorService {
         multiFactorVerification.phoneVerificationToken,
         code,
       );
-      const multiFactorLogin = await this.kv.del(
-        'MFALogin:' + multiFactorVerification.ref,
-      );
-      if (multiFactorLogin === 0)
-        throw new BadRequestException({
-          code: 'mfa_token_no_longer_valid',
-          message:
-            'The Multi-Factor Verification session is no longer valid. For security purposes, please log in again and initiate a new verification process.',
-        });
 
-      return this.authService.createCredentials(
+      return this.createCredentials(
         account,
+        multiFactorVerification.ref,
         significantRequestInformation,
         multiFactorVerification.sessionType,
-        true,
       );
     }
   }

@@ -47,10 +47,10 @@ export default class PhoneVerificationService {
      * Add rate limit for every phone number e.g. 2 verification every 2 mins && 5 verification every 10 mins
      */
     await this.throttler.throwIfRateLimited(
-      'phoneVerificationService:account' + accountId,
+      'phoneVerificationService:account:' + accountId,
       10 * 60,
       2,
-      'data',
+      'account',
     );
 
     await this.throttler.throwIfRateLimited(
