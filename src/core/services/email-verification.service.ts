@@ -1,7 +1,6 @@
 import RedisService from '../providers/redis.service';
 import ThrottlerService from '../security/throttler.service';
 import SendgridService from '../providers/sendgrid.service';
-import { argon2id, hash } from 'argon2';
 import { generateNanoId, unixTimestamp } from '../utils/util';
 import { randomInt } from 'crypto';
 import { ConfigService } from '@nestjs/config';
@@ -20,6 +19,8 @@ export default class EmailVerificationService {
   public static readonly DEFAULT_RESEND: number = 2;
   public static readonly VERIFICATION_EXPIRATION = 60 * 10;
 
+  public static readonly RESEND_COOLDOWN = 30; // 30 seconds
+
   private readonly logger: Logger = new Logger('EmailVerificationService');
 
   constructor(
@@ -32,32 +33,58 @@ export default class EmailVerificationService {
   // message param must contain ###### to replace it with the verification code
   public async start(
     email: string,
-    ip: string,
+    unique: {
+      type: 'account';
+      identifier: bigint;
+    },
     intent: string,
     message: {
       description: string;
       subject: string;
     },
-    {
-      accountId = null,
-      tokenLength = 16,
-    }: { accountId?: bigint | null; tokenLength?: number },
+    tokenLength?: number,
+  );
+  public async start(
+    email: string,
+    unique: {
+      type: 'ip';
+      identifier: string;
+    },
+    intent: string,
+    message: {
+      description: string;
+      subject: string;
+    },
+    tokenLength?: number,
+  );
+  public async start(
+    email: string,
+    unique: {
+      type: 'ip' | 'account';
+      identifier: string | bigint;
+    },
+    intent: string,
+    message: {
+      description: string;
+      subject: string;
+    },
+    tokenLength = 16,
   ) {
     if (!message.description.includes('######')) {
       this.logger.debug('Message not contain ###### to processed', message);
       throw new ServiceUnavailableException();
     }
 
-    if (accountId)
+    if (unique.type === 'account')
       await this.throttler.throwIfRateLimited(
-        'emailVerificationService:account:' + accountId,
+        'emailVerificationService:account:' + unique.identifier,
         15 * 60,
         3,
         'account',
       );
-    else
+    else if (this.config.get('NODE_ENV') === 'production')
       await this.throttler.throwIfRateLimited(
-        'emailVerificationService:ip:' + ip,
+        'emailVerificationService:ip:' + unique.identifier,
         15 * 60,
         2,
         'ip',
@@ -81,7 +108,7 @@ export default class EmailVerificationService {
         intent,
         token: token,
         code: String(randomDigit),
-        accountId: accountId ? String(accountId) : null,
+        accountId: unique.type === 'account' ? String(unique.identifier) : null,
         resend: 0,
         lastResendTimestamp: null,
         attempts: 0,
@@ -128,7 +155,8 @@ export default class EmailVerificationService {
 
     if (
       cache.lastResendTimestamp &&
-      cache.lastResendTimestamp > Date.now() - 30 * 1000
+      cache.lastResendTimestamp >
+        Date.now() - EmailVerificationService.RESEND_COOLDOWN * 1000
     )
       throw new BadRequestException({
         code: 'resend_email_verification_cooldown',
@@ -158,6 +186,10 @@ export default class EmailVerificationService {
       });
     } else
       this.logger.debug(`[Email: ${email}] Verification code: `, cache.code);
+
+    return {
+      nextResend: unixTimestamp(EmailVerificationService.RESEND_COOLDOWN),
+    };
   }
 
   public async verify(

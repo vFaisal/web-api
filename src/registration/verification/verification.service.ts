@@ -48,10 +48,13 @@ export class VerificationService {
 
     const token = await this.emailVerificationService.start(
       email,
-      ip,
+      {
+        type: 'ip',
+        identifier: ip,
+      },
       'registration',
       this.emailVerificationMessage,
-      { tokenLength: 64 },
+      64,
     );
 
     return {
@@ -63,7 +66,7 @@ export class VerificationService {
     d: ResendEmailVerificationDto,
     token: string,
   ) {
-    await this.emailVerificationService.resend(
+    return this.emailVerificationService.resend(
       token,
       d.email,
       'registration',

@@ -13,14 +13,10 @@ import {
 import { PrismaService } from '../../core/providers/prisma.service';
 import PhoneVerificationService from '../../core/services/phone-verification.service';
 import TwilioService from '../../core/providers/twilio.service';
+import TotpService from '../../core/services/totp.service';
 
 @Injectable()
 export class MultiFactorService {
-  //TOTP Configuration
-  private static readonly ALGORITHM = 'sha1';
-  private static readonly ISSUER = 'faisal.gg';
-  public static readonly DIGITS = 6;
-  private static readonly PERIOD = 30;
   private static readonly VERIFICATION_EXPIRES = 60 * 10; //Seconds (10 Min);
 
   constructor(
@@ -28,6 +24,7 @@ export class MultiFactorService {
     private readonly accountService: AccountService,
     private readonly kv: RedisService,
     private readonly prisma: PrismaService,
+    private readonly totpService: TotpService,
   ) {}
 
   public async enableEmail(session: SessionEntity) {
@@ -209,7 +206,7 @@ export class MultiFactorService {
       });
 
     const key = generateNanoId(16);
-    const secret = this.createTOTPSecret(key);
+    const secret = this.totpService.createSecret(key);
 
     await this.kv.setex(
       `totp_mfa_configuration:${account.id}`,
@@ -218,7 +215,7 @@ export class MultiFactorService {
     );
 
     return {
-      uri: this.createTOTPUri(secret, account.email),
+      uri: this.totpService.createUri(secret, account.email),
       expires: unixTimestamp(MultiFactorService.VERIFICATION_EXPIRES),
     };
   }
@@ -244,7 +241,9 @@ export class MultiFactorService {
           'A new configuration for the Multi-Factor Authentication (MFA) authentication app is required. Please generate a new configuration to enable the MFA app.',
       });
 
-    const generatedDigit = this.generateTOTP(this.createTOTPSecret(key));
+    const generatedDigit = this.totpService.generateCode(
+      this.totpService.createSecret(key),
+    );
 
     if (generatedDigit !== digit)
       throw new BadRequestException({
@@ -286,52 +285,6 @@ export class MultiFactorService {
     });
 
     return;
-  }
-
-  private createTOTPSecret(key: string) {
-    return base32Encode(
-      createHmac('sha256', this.config.getOrThrow('APPLICATION_TOTP_KEY'))
-        .update(key)
-        .digest()
-        .subarray(0, 20),
-    );
-  }
-
-  private generateTOTP(secret: string) {
-    const counter = Math.floor(
-      Math.floor(Date.now() / 1000) / MultiFactorService.PERIOD,
-    );
-
-    const counterBuffer = Buffer.alloc(8);
-    counterBuffer.writeBigInt64BE(
-      BigInt(
-        Math.floor(Math.floor(Date.now() / 1000) / MultiFactorService.PERIOD),
-      ),
-      0,
-    );
-
-    const buffer = createHmac('sha1', base32Decode(secret))
-      .update(counterBuffer)
-      .digest();
-    const offset = buffer[buffer.length - 1] & 0x0f;
-    const otp =
-      (buffer.readUInt32BE(offset) & 0x7fffffff) %
-      10 ** MultiFactorService.DIGITS;
-
-    return otp.toString().padStart(MultiFactorService.DIGITS, '0');
-  }
-
-  private createTOTPUri(secret: string, displayName: string) {
-    const params = new URLSearchParams({
-      secret,
-      issuer: MultiFactorService.ISSUER,
-      period: String(MultiFactorService.PERIOD),
-      digits: String(MultiFactorService.DIGITS),
-      algorithm: MultiFactorService.ALGORITHM,
-    });
-    return `otpauth://totp/${
-      MultiFactorService.ISSUER
-    }:${displayName}?${params.toString()}`;
   }
 }
 

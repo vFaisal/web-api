@@ -123,7 +123,7 @@ export class AuthService {
         unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
         {
           accountId: String(safeAccountData.raw.account.id),
-          uses: 0,
+          totpAttempts: 0,
           sessionType: sessionType,
         },
       );
@@ -131,9 +131,7 @@ export class AuthService {
         type: 'mfa_required',
         data: {
           email: safeAccountData.isMFAEmailEnabled()
-            ? {
-                target: hideEmail(safeAccountData.email),
-              }
+            ? hideEmail(safeAccountData.email)
             : null,
           phone: safeAccountData.isMFASMSEnabled()
             ? safeAccountData.getPhoneWithHide()

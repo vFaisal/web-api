@@ -28,10 +28,40 @@ export class MultiFactorController {
     @Body('token', new ParseNanoidPipe(16)) token: string,
     @Body() body: MultiFactorLoginStartVerificationDto,
   ) {
-    return this.multiFactorService.startVerification(token, body);
+    return this.multiFactorService.startVerification(
+      token,
+      significantRequestInformation(req),
+      body,
+    );
   }
 
-  @Patch()
+  @Post('verify/totp')
+  @HttpCode(HttpStatus.OK)
+  public verifyTOTP(
+    @Req() req: FastifyRequest,
+    @Body('token', new ParseNanoidPipe(16)) token: string,
+    @Body() body: MultiFactorLoginVerifyDto,
+  ) {
+    return this.multiFactorService.verifyTOTP(
+      token,
+      body.code,
+      significantRequestInformation(req),
+    );
+  }
+
+  @Post('resend')
+  @HttpCode(HttpStatus.OK)
+  public resend(
+    @Req() req: FastifyRequest,
+    @Body('token', new ParseNanoidPipe(16)) token: string,
+  ) {
+    return this.multiFactorService.resend(
+      token,
+      significantRequestInformation(req),
+    );
+  }
+
+  @Post('verify')
   @HttpCode(HttpStatus.OK)
   public verify(
     @Req() req: FastifyRequest,

@@ -32,7 +32,7 @@ export class VerificationController {
   }
 
   @Post('/email/resend')
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.OK)
   resend(
     @Body() body: ResendEmailVerificationDto,
     @Body('token', new ParseNanoidPipe(64)) token: string,
