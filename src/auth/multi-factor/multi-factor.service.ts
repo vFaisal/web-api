@@ -150,7 +150,7 @@ export class MultiFactorService {
       const loginVerificationToken = generateNanoId();
       await this.kv.setex<MultiFactorVerification>(
         `MFALoginVerification:${loginVerificationToken}`,
-        unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
+        AuthService.EXPIRATION.MFA_VERIFY_TOKEN,
         {
           accountId: String(safeAccountData.raw.account.id),
           verificationToken: phoneVerificationToken,
@@ -190,7 +190,7 @@ export class MultiFactorService {
       const loginVerificationToken = generateNanoId();
       await this.kv.setex<MultiFactorVerification>(
         `MFALoginVerification:${loginVerificationToken}`,
-        unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
+        AuthService.EXPIRATION.MFA_VERIFY_TOKEN,
         {
           accountId: String(safeAccountData.raw.account.id),
           verificationToken: emailVerificationToken,

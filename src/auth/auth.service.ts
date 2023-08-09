@@ -128,7 +128,7 @@ export class AuthService {
       const token = generateNanoId();
       await this.kv.setex<MultiFactorLogin>(
         `MFALogin:${token}`,
-        unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
+        AuthService.EXPIRATION.MFA_VERIFY_TOKEN,
         {
           accountId: String(safeAccountData.raw.account.id),
           totpAttempts: 0,
