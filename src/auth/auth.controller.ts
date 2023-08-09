@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
   Patch,
   Post,
   Put,
@@ -20,14 +21,17 @@ import SessionEntity from './entities/session.entity';
 import { Recaptcha } from '../core/security/recaptch.decorator';
 import { FastifyRequest } from 'fastify';
 import ParseNanoidPipe from '../shared/pipes/parse-nanoid.pipe';
+import PasswordRecoveryDto from './dto/password-recovery.dto';
+import StartPasswordRecoveryDto from './dto/start-password-recovery.dto';
 
 @Controller({
+  path: 'auth',
   version: '1',
 })
 export class AuthController {
   constructor(private readonly authenticateService: AuthService) {}
 
-  @Post('authenticate')
+  @Post('auth')
   @HttpCode(HttpStatus.OK)
   @Recaptcha('login')
   public authenticate(
@@ -41,7 +45,30 @@ export class AuthController {
     );
   }
 
-  @Put('auth/token')
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Recaptcha('forgot-password')
+  public startPasswordRecovery(
+    @Req() req: FastifyRequest,
+    @Body() body: StartPasswordRecoveryDto,
+  ) {
+    return this.authenticateService.startPasswordRecovery(
+      body.email,
+      significantRequestInformation(req),
+    );
+  }
+
+  @Post('forgot-password/:token')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public passwordRecovery(
+    @Param('token', new ParseNanoidPipe(64)) token: string,
+    @Body() body: PasswordRecoveryDto,
+    @Req() req: FastifyRequest,
+  ) {
+    return this.authenticateService.passwordRecovery(token, body.password);
+  }
+
+  @Put('token')
   @HttpCode(HttpStatus.OK)
   public refreshToken(
     @Body() body: RefreshTokenDto,
@@ -53,7 +80,7 @@ export class AuthController {
     );
   }
 
-  @Delete('auth/token')
+  @Delete('token')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   public revokeToken(@Req() req) {

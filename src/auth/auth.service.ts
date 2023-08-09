@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../core/providers/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { argon2id, verify } from 'argon2';
+import { argon2id, hash, verify } from 'argon2';
 import {
   generateNanoId,
   hideEmail,
@@ -21,6 +21,9 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import RedisService from '../core/providers/redis.service';
 import { AccountEntity } from '../account/entities/account.entity';
 import { MultiFactorLogin } from './multi-factor/multi-factor.service';
+import ThrottlerService from '../core/security/throttler.service';
+import Constants from '../core/utils/constants';
+import SendgridService from '../core/providers/sendgrid.service';
 
 @Injectable()
 export class AuthService {
@@ -29,7 +32,10 @@ export class AuthService {
     ACCESS_TOKEN: 60 * 60, // 1h (Seconds)
     REFRESH_TOKEN: 60 * 60 * 24 * 14, // 14 Days (Seconds)
     MFA_VERIFY_TOKEN: 10 * 60, // 10m (Seconds)
+    PASSWORD_RECOVERY_TOKEN: 2 * 60 * 60, // 2h (Seconds)
   };
+  private static readonly PASSWORD_RECOVERY_BASE_URI =
+    'https://account.project.faisal.gg/forgot-password';
 
   constructor(
     private readonly jwtService: JwtService,
@@ -37,6 +43,8 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly kv: RedisService,
+    private readonly throttler: ThrottlerService,
+    private readonly sendgrid: SendgridService,
   ) {}
 
   public async authenticate(
@@ -320,6 +328,100 @@ export class AuthService {
 
     await this.kv.del(`session:${session.getSecondaryPublicId()}`);
   }
+
+  public async startPasswordRecovery(
+    email: string,
+    sri: SignificantRequestInformation,
+  ) {
+    const account = await this.prisma.account.findUnique({
+      where: {
+        email: email,
+      },
+    });
+
+    if (!account)
+      throw new BadRequestException({
+        code: 'email_not_registered_yet',
+        message:
+          'The email address you entered is not associated with any existing account.',
+      });
+
+    if (this.config.get('NODE_ENV') === 'production')
+      await this.throttler.throwIfRateLimited(
+        'passwordRecoveryService:ip:' + sri.ipAddress,
+        2 * 60 * 60,
+        10,
+        'ip',
+      );
+
+    await this.throttler.throwIfRateLimited(
+      'passwordRecoveryService:account:' + account.id,
+      2 * 60 * 60,
+      4,
+      'data',
+    );
+
+    const token = generateNanoId(64);
+    await this.kv.setex<PasswordRecoveryCache>(
+      'passwordRecovery:' + token,
+      AuthService.EXPIRATION.PASSWORD_RECOVERY_TOKEN,
+      {
+        accountId: String(account.id),
+        email: account.email,
+      },
+    );
+    const link = AuthService.PASSWORD_RECOVERY_BASE_URI + '/' + token;
+
+    const mail =
+      `Dear ${account.displayName ?? ''},\n` +
+      '\n' +
+      'A password reset has been requested for your account. To proceed, please follow the link provided below:\n' +
+      link +
+      '\n' +
+      "If this request wasn't made by you, kindly disregard this email.";
+
+    await this.sendgrid.sendEmail(account.email, 'Password Reset Request', {
+      type: 'text/plain',
+      value: mail,
+    });
+  }
+
+  public async passwordRecovery(token: string, password: string) {
+    const recovery = await this.kv.get<PasswordRecoveryCache>(
+      'passwordRecovery:' + token,
+    );
+    if (!recovery)
+      throw new BadRequestException({
+        code: 'invalid_recovery_token',
+        message: 'The password recovery token provided is invalid or expired.',
+      });
+
+    if (!Constants.PASSWORD_VALIDATION_REGEX.test(password))
+      throw new BadRequestException({
+        code: 'password_invalid_format',
+        message:
+          'The provided password format is invalid. Please use a password that adheres to the specified guidelines.',
+      });
+
+    await this.kv.del('passwordRecovery:' + token);
+
+    await this.prisma.account.updateMany({
+      where: {
+        email: recovery.email,
+        id: BigInt(recovery.accountId),
+      },
+      data: {
+        passwordHash: await hash(password, {
+          version: argon2id,
+        }),
+      },
+    });
+  }
+}
+
+interface PasswordRecoveryCache {
+  accountId: string;
+  email: string;
 }
 
 export interface AppJWTPayload {
