@@ -46,7 +46,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.CREATED)
   @Recaptcha('forgot-password')
   public startPasswordRecovery(
     @Req() req: FastifyRequest,
@@ -58,7 +58,17 @@ export class AuthController {
     );
   }
 
-  @Post('forgot-password/:token')
+  @Get('forgot-password/:token')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public checkPasswordRecoveryToken(
+    @Param('token', new ParseNanoidPipe(64)) token: string,
+    @Body() body: PasswordRecoveryDto,
+    @Req() req: FastifyRequest,
+  ) {
+    return this.authenticateService.checkPasswordRecoveryToken(token);
+  }
+
+  @Patch('forgot-password/:token')
   @HttpCode(HttpStatus.NO_CONTENT)
   public passwordRecovery(
     @Param('token', new ParseNanoidPipe(64)) token: string,

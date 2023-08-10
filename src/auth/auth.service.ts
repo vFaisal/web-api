@@ -386,6 +386,17 @@ export class AuthService {
     });
   }
 
+  public async checkPasswordRecoveryToken(token: string) {
+    const recovery = await this.kv.get<PasswordRecoveryCache>(
+      'passwordRecovery:' + token,
+    );
+    if (!recovery)
+      throw new BadRequestException({
+        code: 'invalid_recovery_token',
+        message: 'The password recovery token provided is invalid or expired.',
+      });
+  }
+
   public async passwordRecovery(token: string, password: string) {
     const recovery = await this.kv.get<PasswordRecoveryCache>(
       'passwordRecovery:' + token,
