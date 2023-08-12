@@ -7,6 +7,7 @@ import {
 import { AccountEntity } from '../../account/entities/account.entity';
 import {
   generateNanoId,
+  requesterInformationAsEmail,
   SignificantRequestInformation,
   unixTimestamp,
 } from '../../core/utils/util';
@@ -77,9 +78,7 @@ export class MultiFactorService {
         'We hope this email finds you well. We have detected an intent to log in to your account from a new device. As part of our commitment to ensuring the utmost security for your account, Multi-Factor Authentication (MFA) has been enabled and configured by you.\n' +
         '\n' +
         'Login Attempt Details:\n' +
-        `Device: ${os}/${browser}\n` +
-        `IP Address: ${significantRequestInformation.ipAddress}\n` +
-        `Country: ${significantRequestInformation.countryCode}\n` +
+        requesterInformationAsEmail(significantRequestInformation) +
         '\n' +
         'To proceed with the login and verify your identity, please use the following 6-digit MFA verification code: ######' +
         '\n' +

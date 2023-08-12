@@ -31,7 +31,7 @@ import StartPasswordRecoveryDto from './dto/start-password-recovery.dto';
 export class AuthController {
   constructor(private readonly authenticateService: AuthService) {}
 
-  @Post('auth')
+  @Post()
   @HttpCode(HttpStatus.OK)
   @Recaptcha('login')
   public authenticate(

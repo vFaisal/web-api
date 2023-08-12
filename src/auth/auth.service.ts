@@ -58,13 +58,20 @@ export class AuthService {
       },
     });
     if (!account)
-      throw new BadRequestException('Email address not registered yet');
+      throw new BadRequestException({
+        code: 'email_not_registered',
+        message:
+          'The provided email address is not associated with any existing account.',
+      });
 
     const isVerifiedPassword = await verify(account.passwordHash, password, {
       version: argon2id,
     });
     if (!isVerifiedPassword)
-      throw new BadRequestException('The credentials are invalid');
+      throw new BadRequestException({
+        code: 'invalid_credentials',
+        message: 'The provided credentials are invalid.',
+      });
 
     return this.createCredentials(
       account,
@@ -216,7 +223,10 @@ export class AuthService {
       })
       .catch((err) => {
         this.logger.debug('Invalid refresh token', err);
-        throw new BadRequestException('Invalid refresh token', err);
+        throw new BadRequestException({
+          code: 'invalid_refresh_token',
+          message: 'The provided refresh token is invalid or expired.',
+        });
       });
 
     const tokenSession = await this.prisma.accountSessionTokens.findUnique({
@@ -241,10 +251,10 @@ export class AuthService {
     });
 
     if (!tokenSession || tokenSession.session.revokedAt)
-      throw new BadRequestException(
-        'Invalid refresh token',
-        'Session not exist or has been revoked',
-      );
+      throw new BadRequestException({
+        code: 'invalid_refresh_token',
+        message: 'The provided refresh token is invalid or expired.',
+      });
 
     //Check if the refresh token has been used;
     const ref = await this.prisma.accountSessionTokens.findUnique({
@@ -253,10 +263,10 @@ export class AuthService {
       },
     });
     if (ref)
-      throw new BadRequestException(
-        'Invalid refresh token',
-        'This refresh token has been used before.',
-      );
+      throw new BadRequestException({
+        code: 'invalid_refresh_token',
+        message: 'The provided refresh token is invalid or expired.',
+      });
 
     await this.kv.del(`session:${refreshTokenPayload.spi}`);
 
@@ -316,7 +326,10 @@ export class AuthService {
       .catch(async (err) => {
         if (err.code === 'P2025') {
           await this.kv.del(`session:${session.getSecondaryPublicId()}`);
-          throw new BadRequestException('Session not exist.');
+          throw new BadRequestException({
+            code: 'session_unavailable',
+            message: "The session you're attempting to access is unavailable.",
+          });
         }
         this.logger.error(
           'Something was wrong while revoking token.',
