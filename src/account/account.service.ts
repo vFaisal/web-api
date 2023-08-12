@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   PayloadTooLargeException,
@@ -11,17 +12,28 @@ import { AccountEntity } from './entities/account.entity';
 import { MultipartFile } from '@fastify/multipart';
 import R2Service from '../core/providers/r2.service';
 import { nanoid } from 'nanoid';
-import { generateNanoId, unixTimestamp } from '../core/utils/util';
+import {
+  generateNanoId,
+  requesterInformationAsEmail,
+  SignificantRequestInformation,
+  unixTimestamp,
+} from '../core/utils/util';
 import SessionEntity from '../auth/entities/session.entity';
 import TwilioService, {
   VerificationChannel,
 } from '../core/providers/twilio.service';
 import RedisService from '../core/providers/redis.service';
 import PhoneVerificationService from '../core/services/phone-verification.service';
+import EmailVerificationService from '../core/services/email-verification.service';
+import { Prisma } from '@prisma/client';
+import { AccountController } from './account.controller';
 
 @Injectable()
 export class AccountService {
   private readonly logger: Logger = new Logger('AccountService');
+
+  private static readonly UPDATE_EMAIL_PERIOD = 10 * 60; // 10min (Seconds)
+  private static readonly ALLOWED_UPDATE_EMAIL_AFTER = 14 * 24 * 60 * 60 * 1000; // 14days (Milliseconds);
 
   constructor(
     private readonly prisma: PrismaService,
@@ -29,6 +41,7 @@ export class AccountService {
     private readonly kv: RedisService,
     private readonly twilioService: TwilioService,
     private readonly phoneVerificationService: PhoneVerificationService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {
@@ -212,6 +225,133 @@ export class AccountService {
       session.getAccount().id,
       token,
       channel,
+    );
+  }
+
+  public getUpdateEmailMessage(
+    safeAccountDate: AccountEntity,
+    sri: SignificantRequestInformation,
+  ) {
+    return {
+      subject: 'Email Change Verification',
+      description:
+        `Hello ${safeAccountDate.displayName ?? ''},\n` +
+        '\n' +
+        "We are reaching out to you to confirm the recent request to update your email address for your account. Your account's security is our top concern, and we want to ensure the validity of this change.\n" +
+        'To finalize the email address update, please input the 6-digit verification code provided below:\n' +
+        '\n' +
+        'Verification Code: ###### (This code is only valid for 10 minutes.)\n\n' +
+        'Requester Information:\n' +
+        requesterInformationAsEmail(sri),
+    };
+  }
+
+  public async updateEmail(
+    email: string,
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
+    const existEmail = await this.prisma.account.findUnique({
+      where: {
+        email: email,
+      },
+    });
+    if (existEmail)
+      throw new BadRequestException({
+        code: 'email_already_registered',
+        message:
+          'The provided email address is already associated with an existing account.',
+      });
+
+    const account = await this.prisma.account.findUniqueOrThrow({
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+
+    if (
+      account.emailVerifiedAt &&
+      account.emailVerifiedAt.getTime() +
+        AccountService.ALLOWED_UPDATE_EMAIL_AFTER >=
+        Date.now()
+    )
+      throw new BadRequestException({
+        code: 'email_update_temporarily_unavailable',
+        message:
+          'Email address updates are restricted to once every 14 days. You can update your email again after the cooldown period.',
+      });
+
+    const safeAccountDate = new AccountEntity(account);
+
+    const verificationToken = await this.emailVerificationService.start(
+      email,
+      {
+        type: 'account',
+        identifier: account.id,
+      },
+      'updateEmail',
+      this.getUpdateEmailMessage(safeAccountDate, sri),
+    );
+
+    return {
+      token: verificationToken,
+      expires: unixTimestamp(AccountService.UPDATE_EMAIL_PERIOD),
+    };
+  }
+
+  public async verifyUpdateEmail(
+    session: SessionEntity,
+    token: string,
+    email: string,
+    code: string,
+  ) {
+    const verification = await this.emailVerificationService.verify(
+      code,
+      token,
+      email,
+      'updateEmail',
+      session.getAccount().id,
+    );
+
+    await this.prisma.account
+      .updateMany({
+        data: {
+          email: verification.email,
+          emailVerifiedAt: new Date(),
+        },
+        where: {
+          id: session.getAccount().id,
+        },
+      })
+      .catch((err: Prisma.PrismaClientKnownRequestError) => {
+        if (err.code == 'P2002')
+          throw new ConflictException({
+            code: 'email_already_registered',
+            message:
+              'Email address is already associated with an existing account.',
+          });
+        throw new ServiceUnavailableException();
+      });
+  }
+
+  public async resendUpdateEmail(
+    session: SessionEntity,
+    email: string,
+    token: string,
+    sri: SignificantRequestInformation,
+  ) {
+    const account = await this.prisma.account.findUniqueOrThrow({
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+    const safeAccountData = new AccountEntity(account);
+    await this.emailVerificationService.resend(
+      token,
+      email,
+      'updateEmail',
+      this.getUpdateEmailMessage(safeAccountData, sri),
+      session.getAccount().id,
     );
   }
 }

@@ -17,7 +17,10 @@ import { FastifyRequest } from 'fastify';
 import StartPhoneVerificationDto from './dto/start-phone-verification.dto';
 import ParseNanoidPipe from '../shared/pipes/parse-nanoid.pipe';
 import VerifyPhoneVerificationDto from './dto/verify-phone-verification.dto';
-import ResendPhoneVerification from './dto/resend-phone-verification';
+import ResendPhoneVerificationDto from './dto/resend-phone-verification.dto';
+import UpdateEmailDto from './dto/update-email.dto';
+import { significantRequestInformation } from '../core/utils/util';
+import VerifyUpdateEmailDto from './dto/verify-update-email.dto';
 
 @Controller({
   path: 'account',
@@ -88,7 +91,7 @@ export class AccountController {
   @HttpCode(HttpStatus.CREATED)
   async resendPhoneVerification(
     @Req() request: FastifyRequest,
-    @Body() body: ResendPhoneVerification,
+    @Body() body: ResendPhoneVerificationDto,
     @Body('token', new ParseNanoidPipe(16)) token: string,
   ) {
     const session: SessionEntity = (request as any).session;
@@ -97,6 +100,55 @@ export class AccountController {
       body.phoneNumber,
       token,
       body.channel,
+    );
+  }
+
+  @Post('update-email')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async updateEmail(
+    @Req() request: FastifyRequest,
+    @Body() body: UpdateEmailDto,
+  ) {
+    const session: SessionEntity = (request as any).session;
+    return this.accountService.updateEmail(
+      body.email,
+      session,
+      significantRequestInformation(request),
+    );
+  }
+
+  @Post('update-email/verify')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async verifyUpdateEmail(
+    @Req() request: FastifyRequest,
+    @Body() body: VerifyUpdateEmailDto,
+    @Body('token', new ParseNanoidPipe(16)) token: string,
+  ) {
+    const session: SessionEntity = (request as any).session;
+    return this.accountService.verifyUpdateEmail(
+      session,
+      token,
+      body.email,
+      body.code,
+    );
+  }
+
+  @Post('update-email/resend')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async resendUpdateEmail(
+    @Req() request: FastifyRequest,
+    @Body() body: UpdateEmailDto,
+    @Body('token', new ParseNanoidPipe(16)) token: string,
+  ) {
+    const session: SessionEntity = (request as any).session;
+    return this.accountService.resendUpdateEmail(
+      session,
+      body.email,
+      token,
+      significantRequestInformation(request),
     );
   }
 }

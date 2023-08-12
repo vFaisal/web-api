@@ -43,7 +43,7 @@ export default class EmailVerificationService {
       subject: string;
     },
     tokenLength?: number,
-  );
+  ): Promise<string>;
   public async start(
     email: string,
     unique: {
@@ -56,7 +56,7 @@ export default class EmailVerificationService {
       subject: string;
     },
     tokenLength?: number,
-  );
+  ): Promise<string>;
   public async start(
     email: string,
     unique: {
@@ -69,7 +69,7 @@ export default class EmailVerificationService {
       subject: string;
     },
     tokenLength = 16,
-  ) {
+  ): Promise<string> {
     if (!message.description.includes('######')) {
       this.logger.debug('Message not contain ###### to processed', message);
       throw new ServiceUnavailableException();
@@ -237,6 +237,8 @@ export default class EmailVerificationService {
     }
 
     await this.kv.del('emailVerification:' + email);
+
+    return cache;
   }
 
   private async retrieveCache(

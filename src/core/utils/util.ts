@@ -1,6 +1,8 @@
 import { customAlphabet } from 'nanoid';
 import { Request } from 'express';
 import { lookup } from 'geoip-lite';
+import { UAParser } from 'ua-parser-js';
+import Constants from './constants';
 
 export function generateNanoId(size = 16): string {
   return customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', size)();
@@ -29,6 +31,7 @@ export type SignificantRequestInformation = {
   city: string | null;
   region: string | null;
   countryCode: string | null;
+  country: string | null;
   isp: string | null;
   userAgent: string;
 };
@@ -38,11 +41,14 @@ export function significantRequestInformation(
 ): SignificantRequestInformation {
   const ipAddress = req.ip;
   const geo = lookup(ipAddress);
+  const countryCode = geo?.country ?? null;
+  const country = countryCode ? Constants.COUNTRIES[countryCode] : null;
   return {
     ipAddress,
     city: geo?.city ?? null,
     region: geo?.region ?? null,
     countryCode: geo?.country ?? null,
+    country: country,
     isp: null,
     userAgent: req.headers['user-agent'],
   };
@@ -112,4 +118,15 @@ export function hidePhone(phoneNumber) {
   const hiddenPart = '*'.repeat(phoneNumber.length - 4);
 
   return hiddenPart + visiblePart;
+}
+
+export function requesterInformationAsEmail(
+  sqi: SignificantRequestInformation,
+) {
+  const userAgentParsed = new UAParser(sqi.userAgent);
+  const os = userAgentParsed.getOS().name ?? '';
+  const browser = userAgentParsed.getBrowser().name ?? '';
+  return `Location: ${
+    sqi.city ? sqi.city + ', ' + sqi.country : sqi.country ?? ''
+  } (IP: ${sqi.ipAddress})\nPlatform: ${browser} browser on ${os} device`;
 }
