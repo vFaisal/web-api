@@ -111,16 +111,10 @@ export class MultiFactorService {
 
     if (['voice', 'sms', 'whatsapp'].includes(data.method)) {
       if (
-        !safeAccountData.isMFASMSEnabled() &&
-        ['voice', 'sms'].includes(data.method)
+        (!safeAccountData.isMFASMSEnabled() &&
+          ['voice', 'sms'].includes(data.method)) ||
+        (!safeAccountData.isMFASMSEnabled() && data.method === 'whatsapp')
       )
-        throw new BadRequestException({
-          code: 'mfa_method_not_available',
-          message:
-            'The requested Multi-Factor Authentication method is not available or cannot be used for the current user. Please try another available MFA method.',
-        });
-
-      if (!safeAccountData.isMFASMSEnabled() && data.method === 'whatsapp')
         throw new BadRequestException({
           code: 'mfa_method_not_available',
           message:
@@ -145,6 +139,7 @@ export class MultiFactorService {
           : data.method === 'whatsapp'
           ? VerificationChannel.WHATSAPP
           : VerificationChannel.SMS,
+        'two-factor',
       );
       const loginVerificationToken = generateNanoId();
       await this.kv.setex<MultiFactorVerification>(
@@ -210,6 +205,7 @@ export class MultiFactorService {
   }
 
   public async resend(
+    data: MultiFactorLoginStartVerificationDto,
     token: string,
     significantRequestInformation: SignificantRequestInformation,
   ) {
@@ -232,12 +228,10 @@ export class MultiFactorService {
     const safeAccountData = new AccountEntity(account);
 
     if (
-      (['sms', 'voice'].includes(multiFactorVerification.method) &&
+      (['sms', 'voice'].includes(data.method) &&
         !safeAccountData.isMFASMSEnabled()) ||
-      (multiFactorVerification.method === 'whatsapp' &&
-        !safeAccountData.isMFAWhatsappEnabled()) ||
-      (multiFactorVerification.method === 'email' &&
-        !safeAccountData.isMFAEmailEnabled())
+      (data.method === 'whatsapp' && !safeAccountData.isMFAWhatsappEnabled()) ||
+      (data.method === 'email' && !safeAccountData.isMFAEmailEnabled())
     )
       throw new BadRequestException({
         code: 'mfa_method_no_longer_available',
@@ -252,11 +246,12 @@ export class MultiFactorService {
         fullNumber,
         account.id,
         multiFactorVerification.verificationToken,
-        multiFactorVerification.method === 'voice'
+        data.method === 'voice'
           ? VerificationChannel.CALL
-          : multiFactorVerification.method === 'whatsapp'
+          : data.method === 'whatsapp'
           ? VerificationChannel.WHATSAPP
           : VerificationChannel.SMS,
+        'two-factor',
       );
     } else if (multiFactorVerification.method === 'email') {
       return this.emailVerificationService.resend(
@@ -391,6 +386,7 @@ export class MultiFactorService {
         account.id,
         multiFactorVerification.verificationToken,
         code,
+        'two-factor',
       );
 
       return this.createCredentials(

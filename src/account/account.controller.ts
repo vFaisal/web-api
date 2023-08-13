@@ -54,22 +54,22 @@ export class AccountController {
     return this.accountService.deletePhoto(session);
   }
 
-  @Post('phone/start-verification')
+  @Post('update-phone')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
-  async startPhoneVerification(
+  async updatePhone(
     @Req() request: FastifyRequest,
     @Body() body: StartPhoneVerificationDto,
   ) {
     const session: SessionEntity = (request as any).session;
-    return this.accountService.startPhoneVerification(
+    return this.accountService.updatePhone(
       session,
       body.phoneNumber,
       body.channel,
     );
   }
 
-  @Post('phone/verify')
+  @Post('update-phone/verify')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async verifyPhone(
@@ -86,7 +86,7 @@ export class AccountController {
     );
   }
 
-  @Post('phone/resend')
+  @Post('update-phone/resend')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async resendPhoneVerification(
@@ -120,7 +120,7 @@ export class AccountController {
 
   @Post('update-email/verify')
   @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.NO_CONTENT)
   async verifyUpdateEmail(
     @Req() request: FastifyRequest,
     @Body() body: VerifyUpdateEmailDto,

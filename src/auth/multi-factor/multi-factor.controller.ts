@@ -54,8 +54,10 @@ export class MultiFactorController {
   public resend(
     @Req() req: FastifyRequest,
     @Body('token', new ParseNanoidPipe(16)) token: string,
+    @Body() body: MultiFactorLoginStartVerificationDto,
   ) {
     return this.multiFactorService.resend(
+      body,
       token,
       significantRequestInformation(req),
     );

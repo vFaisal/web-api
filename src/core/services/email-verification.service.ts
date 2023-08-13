@@ -231,8 +231,7 @@ export default class EmailVerificationService {
 
       throw new BadRequestException({
         code: 'invalid_email_verification_code',
-        message:
-          'The email verification code provided is invalid. Please ensure you have entered the correct code and try again.',
+        message: 'The email verification code provided is invalid.',
       });
     }
 
@@ -254,14 +253,12 @@ export default class EmailVerificationService {
     if (!cache)
       throw new BadRequestException({
         code: 'new_email_verification_required',
-        message:
-          'A new email verification is required. Please generate a new verification code and try again.',
+        message: 'A new email verification is required.',
       });
     if (cache.token !== token || cache.intent !== intent)
       throw new BadRequestException({
         code: 'email_verification_token_invalid',
-        message:
-          'The email verification token provided is not valid. Please verify the token and try again.',
+        message: 'The email verification token provided is not valid.',
       });
 
     if (accountId && cache.accountId && BigInt(cache.accountId) !== accountId)

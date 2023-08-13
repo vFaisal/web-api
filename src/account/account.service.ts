@@ -121,7 +121,7 @@ export class AccountService {
     }
   }
 
-  public async startPhoneVerification(
+  public async updatePhone(
     session: SessionEntity,
     internationalPhoneNumber: string,
     channel: VerificationChannel,
@@ -153,7 +153,7 @@ export class AccountService {
       throw new BadRequestException({
         code: 'phone_number_already_linked',
         message:
-          'The phone number provided is already associated with another account. Please use a different phone number or contact support for further assistance.',
+          'The phone number provided is already associated with another account.',
       });
 
     /*    await this.prisma.account.updateMany({
@@ -174,6 +174,7 @@ export class AccountService {
         countryCallingCode: parsedPhoneNumber.calling_country_code,
       },
       channel,
+      'updatePhone',
     );
 
     return {
@@ -198,6 +199,7 @@ export class AccountService {
       session.getAccount().id,
       token,
       code,
+      'updatePhone',
     );
 
     await this.prisma.account.updateMany({
@@ -225,6 +227,7 @@ export class AccountService {
       session.getAccount().id,
       token,
       channel,
+      'updatePhone',
     );
   }
 
@@ -346,7 +349,7 @@ export class AccountService {
       },
     });
     const safeAccountData = new AccountEntity(account);
-    await this.emailVerificationService.resend(
+    return this.emailVerificationService.resend(
       token,
       email,
       'updateEmail',

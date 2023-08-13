@@ -36,6 +36,8 @@ export default class PhoneVerificationService {
       number: string;
     },
     channel: VerificationChannel,
+    intent: string,
+    tokenLength = 16,
   ) {
     const fullPhoneNumber = '+' + phone.countryCallingCode + phone.number;
 
@@ -43,9 +45,6 @@ export default class PhoneVerificationService {
       this.cacheKey(fullPhoneNumber),
     );
 
-    /**
-     * Add rate limit for every phone number e.g. 2 verification every 2 mins && 5 verification every 10 mins
-     */
     await this.throttler.throwIfRateLimited(
       'phoneVerificationService:account:' + accountId,
       10 * 60,
@@ -65,7 +64,7 @@ export default class PhoneVerificationService {
         throw new BadRequestException({
           code: 'phone_number_already_linked',
           message:
-            'The phone number provided is already associated with another account. Please use a different phone number or contact support for further assistance.',
+            'The phone number provided is already associated with another account.',
         });
       await this.twilioService.cancelVerification(
         cachedVerificationProcess.sid,
@@ -77,17 +76,18 @@ export default class PhoneVerificationService {
       channel,
     );
 
-    const token = generateNanoId();
+    const token = generateNanoId(tokenLength);
 
-    await this.kv.setex(
+    await this.kv.setex<PhoneVerificationCache>(
       this.cacheKey(fullPhoneNumber),
       PhoneVerificationService.VERIFICATION_EXPIRATION,
       {
         sid: verification.sid,
+        intent,
         token: token,
         phone,
         accountId: String(accountId),
-      } satisfies PhoneVerificationCache,
+      },
     );
     return token;
   }
@@ -97,10 +97,12 @@ export default class PhoneVerificationService {
     accountId: bigint,
     token: string,
     channel: VerificationChannel,
+    intent: string,
   ) {
     const verification = await this.getSessionWithVerify(
       phoneNumber,
       token,
+      intent,
       accountId,
     );
 
@@ -133,10 +135,12 @@ export default class PhoneVerificationService {
     accountId: bigint,
     token: string,
     code: string,
+    intent: string,
   ) {
     const verification = await this.getSessionWithVerify(
       phoneNumber,
       token,
+      intent,
       accountId,
     );
 
@@ -149,8 +153,7 @@ export default class PhoneVerificationService {
     if (check === false) {
       throw new BadRequestException({
         code: 'invalid_phone_verification_code',
-        message:
-          'The phone verification code provided is invalid. Please ensure you have entered the correct code and try again.',
+        message: 'The phone verification code provided is invalid.',
       });
     }
 
@@ -172,6 +175,7 @@ export default class PhoneVerificationService {
   private async getSessionWithVerify(
     phoneNumber: string,
     token: string,
+    intent: string,
     accountId: bigint,
   ): Promise<{ cache: PhoneVerificationCache; send_code_attempts: any[] }> {
     const cachedVerificationProcess: PhoneVerificationCache = await this.kv.get(
@@ -183,7 +187,10 @@ export default class PhoneVerificationService {
         message:
           'A new phone verification is required. Please generate a new verification code and try again.',
       });
-    if (cachedVerificationProcess.token !== token)
+    if (
+      cachedVerificationProcess.token !== token ||
+      cachedVerificationProcess.intent !== intent
+    )
       throw new BadRequestException({
         code: 'phone_verification_token_invalid',
         message:
@@ -217,5 +224,6 @@ interface PhoneVerificationCache {
     countryCallingCode: string;
     number: string;
   };
+  intent: string;
   accountId: string;
 }
