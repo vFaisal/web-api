@@ -194,5 +194,5 @@ export default class TwilioService {
 export enum VerificationChannel {
   SMS = 'sms',
   WHATSAPP = 'whatsapp',
-  CALL = 'voice',
+  CALL = 'call',
 }

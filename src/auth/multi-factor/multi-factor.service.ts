@@ -113,19 +113,19 @@ export class MultiFactorService {
       if (
         (!safeAccountData.isMFASMSEnabled() &&
           ['voice', 'sms'].includes(data.method)) ||
-        (!safeAccountData.isMFASMSEnabled() && data.method === 'whatsapp')
+        (!safeAccountData.isMFAWhatsappEnabled() && data.method === 'whatsapp')
       )
         throw new BadRequestException({
           code: 'mfa_method_not_available',
           message:
-            'The requested Multi-Factor Authentication method is not available or cannot be used for the current user. Please try another available MFA method.',
+            'The requested Multi-Factor Authentication method is not available or cannot be used for the current account. Please try another available MFA method.',
         });
 
       if (data.phoneNumber !== safeAccountData.phone.full)
         throw new BadRequestException({
           code: 'mfa_phone_number_not_matches',
           message:
-            'The provided phone number does not match the registered phone number for this account. Please verify the phone number and try again.',
+            'The provided phone number does not match the registered phone number for this account.',
         });
 
       const phoneVerificationToken = await this.phoneVerificationService.start(
@@ -165,7 +165,7 @@ export class MultiFactorService {
         throw new BadRequestException({
           code: 'mfa_method_not_available',
           message:
-            'The requested Multi-Factor Authentication method is not available or cannot be used for the current user. Please try another available MFA method.',
+            'The requested Multi-Factor Authentication method is not available or cannot be used for the current account. Please try another available MFA method.',
         });
 
       const emailVerificationToken = await this.emailVerificationService.start(
@@ -300,7 +300,7 @@ export class MultiFactorService {
       throw new BadRequestException({
         code: 'mfa_method_not_available',
         message:
-          'The requested Multi-Factor Authentication method is not available or cannot be used for the current user. Please try another available MFA method.',
+          'The requested Multi-Factor Authentication method is not available or cannot be used for the current account.',
       });
 
     if (multiFactorLogin.totpAttempts >= 10)
@@ -308,7 +308,7 @@ export class MultiFactorService {
         {
           code: 'mfa_rate_limit_exceeded',
           message:
-            'You have exceeded the maximum number of attempts for MFA login using TOTP. Please try again later.',
+            'You have exceeded the maximum number of attempts for MFA login using TOTP.',
         },
         429,
       );
