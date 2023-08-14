@@ -21,6 +21,7 @@ import ResendPhoneVerificationDto from './dto/resend-phone-verification.dto';
 import UpdateEmailDto from './dto/update-email.dto';
 import { significantRequestInformation } from '../core/utils/util';
 import VerifyUpdateEmailDto from './dto/verify-update-email.dto';
+import UpdatePasswordDto from './dto/update-password.dto';
 
 @Controller({
   path: 'account',
@@ -54,7 +55,15 @@ export class AccountController {
     return this.accountService.deletePhoto(session);
   }
 
-  @Post('update-phone')
+  @Delete('phone')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deletePhone(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.accountService.deletePhone(session);
+  }
+
+  @Post('update-phone/start-verification')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.CREATED)
   async updatePhone(
@@ -71,7 +80,7 @@ export class AccountController {
 
   @Post('update-phone/verify')
   @UseGuards(AuthGuard)
-  @HttpCode(HttpStatus.CREATED)
+  @HttpCode(HttpStatus.NO_CONTENT)
   async verifyPhone(
     @Req() request: FastifyRequest,
     @Body() body: VerifyPhoneVerificationDto,

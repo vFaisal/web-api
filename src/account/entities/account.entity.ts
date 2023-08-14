@@ -115,7 +115,7 @@ export class AccountEntity {
     return this.raw.account.createdAt;
   }
 
-  private havePhoneNumber() {
+  public havePhoneNumber() {
     return (
       !!this.raw.account.phoneNumber && !!this.raw.account.phoneCountryCode
     );
