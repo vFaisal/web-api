@@ -160,4 +160,15 @@ export class AccountController {
       significantRequestInformation(request),
     );
   }
+
+  @Post('update-password')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async updatePassword(
+    @Req() request: FastifyRequest,
+    @Body() body: UpdatePasswordDto,
+  ) {
+    const session: SessionEntity = (request as any).session;
+    return this.accountService.updatePassword(session, body);
+  }
 }

@@ -11,7 +11,6 @@ import { PrismaService } from '../core/providers/prisma.service';
 import { AccountEntity } from './entities/account.entity';
 import { MultipartFile } from '@fastify/multipart';
 import R2Service from '../core/providers/r2.service';
-import { nanoid } from 'nanoid';
 import {
   generateNanoId,
   requesterInformationAsEmail,
@@ -26,7 +25,9 @@ import RedisService from '../core/providers/redis.service';
 import PhoneVerificationService from '../core/services/phone-verification.service';
 import EmailVerificationService from '../core/services/email-verification.service';
 import { Prisma } from '@prisma/client';
-import { AccountController } from './account.controller';
+import UpdatePasswordDto from './dto/update-password.dto';
+import { argon2id, hash, verify } from 'argon2';
+import ThrottlerService from '../core/security/throttler.service';
 
 @Injectable()
 export class AccountService {
@@ -34,6 +35,8 @@ export class AccountService {
 
   private static readonly UPDATE_EMAIL_PERIOD = 10 * 60; // 10min (Seconds)
   private static readonly ALLOWED_UPDATE_EMAIL_AFTER = 14 * 24 * 60 * 60 * 1000; // 14days (Milliseconds);
+  private static readonly ATTEMPTS_UPDATE_PASSWORD_LIMIT = 15;
+  private static readonly ATTEMPTS_UPDATE_PASSWORD_TTL = 15 * 60;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -42,6 +45,7 @@ export class AccountService {
     private readonly twilioService: TwilioService,
     private readonly phoneVerificationService: PhoneVerificationService,
     private readonly emailVerificationService: EmailVerificationService,
+    private readonly throttler: ThrottlerService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {
@@ -119,6 +123,33 @@ export class AccountService {
         },
       });
     }
+  }
+
+  public async deletePhone(session: SessionEntity) {
+    const account = await this.prisma.account.findUniqueOrThrow({
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+    const safeAccountData = new AccountEntity(account);
+    if (!safeAccountData.havePhoneNumber())
+      throw new BadRequestException({
+        code: 'phone_number_absent',
+        message: 'The account does not have a registered phone number',
+      });
+
+    await this.prisma.account.updateMany({
+      where: {
+        id: session.getAccount().id,
+      },
+      data: {
+        phoneNumber: null,
+        phoneCountryCode: null,
+        phoneVerifiedAt: null,
+        mfaSMS: null,
+        mfaWhatsapp: null,
+      },
+    });
   }
 
   public async updatePhone(
@@ -356,5 +387,46 @@ export class AccountService {
       this.getUpdateEmailMessage(safeAccountData, sri),
       session.getAccount().id,
     );
+  }
+
+  public async updatePassword(session: SessionEntity, d: UpdatePasswordDto) {
+    const account = await this.prisma.account.findUniqueOrThrow({
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+
+    await this.throttler.throwIfRateLimited(
+      'updatePasswordAttempts:' + session.getAccount().id,
+      AccountService.ATTEMPTS_UPDATE_PASSWORD_TTL,
+      AccountService.ATTEMPTS_UPDATE_PASSWORD_LIMIT,
+      'account',
+    );
+
+    const isVerifiedPassword = await verify(
+      account.passwordHash,
+      d.currentPassword,
+      {
+        version: argon2id,
+      },
+    );
+    if (!isVerifiedPassword) {
+      throw new BadRequestException({
+        code: 'current_password_mismatch',
+        message:
+          "The current password you provided does not match your account's current password.",
+      });
+    }
+
+    this.prisma.account.updateMany({
+      where: {
+        id: session.getAccount().id,
+      },
+      data: {
+        passwordHash: await hash(d.newPassword, {
+          version: argon2id,
+        }),
+      },
+    });
   }
 }
