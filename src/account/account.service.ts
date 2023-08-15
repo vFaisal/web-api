@@ -28,6 +28,8 @@ import { Prisma } from '@prisma/client';
 import UpdatePasswordDto from './dto/update-password.dto';
 import { argon2id, hash, verify } from 'argon2';
 import ThrottlerService from '../core/security/throttler.service';
+import UpdateAccountDto from './dto/update-account.dto';
+import OpenaiService from '../core/providers/openai.service';
 
 @Injectable()
 export class AccountService {
@@ -38,6 +40,9 @@ export class AccountService {
   private static readonly ATTEMPTS_UPDATE_PASSWORD_LIMIT = 15;
   private static readonly ATTEMPTS_UPDATE_PASSWORD_TTL = 15 * 60;
 
+  private static readonly ATTEMPTS_UPDATE_DISPLAY_NAME_LIMIT = 15;
+  private static readonly ATTEMPTS_UPDATE_DISPLAY_NAME_TTL = 2 * 60 * 60;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
@@ -46,6 +51,7 @@ export class AccountService {
     private readonly phoneVerificationService: PhoneVerificationService,
     private readonly emailVerificationService: EmailVerificationService,
     private readonly throttler: ThrottlerService,
+    private readonly openai: OpenaiService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {
@@ -428,5 +434,43 @@ export class AccountService {
         }),
       },
     });
+  }
+
+  public async update(session: SessionEntity, d: UpdateAccountDto) {
+    const account = await this.prisma.account.findUniqueOrThrow({
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+
+    if (
+      account.displayName?.trim().toLowerCase() !==
+      d.displayName.trim().toLowerCase()
+    ) {
+      //Rete-limit
+      await this.throttler.throwIfRateLimited(
+        'updateDisplayName',
+        AccountService.ATTEMPTS_UPDATE_DISPLAY_NAME_TTL,
+        AccountService.ATTEMPTS_UPDATE_DISPLAY_NAME_LIMIT,
+        'account',
+      );
+
+      const moderation = await this.openai.moderation(d.displayName.trim());
+      if (moderation.flagged)
+        throw new BadRequestException({
+          code: 'offensive_display_name',
+          message:
+            'The display name is offensive in nature and cannot be used. Please provide a non-offensive display name.',
+        });
+
+      await this.prisma.account.updateMany({
+        where: {
+          id: session.getAccount().id,
+        },
+        data: {
+          displayName: d.displayName.trim(),
+        },
+      });
+    }
   }
 }

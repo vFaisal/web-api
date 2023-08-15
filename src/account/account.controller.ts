@@ -6,6 +6,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Patch,
   Post,
   Put,
   Req,
@@ -22,6 +23,7 @@ import UpdateEmailDto from './dto/update-email.dto';
 import { significantRequestInformation } from '../core/utils/util';
 import VerifyUpdateEmailDto from './dto/verify-update-email.dto';
 import UpdatePasswordDto from './dto/update-password.dto';
+import UpdateAccountDto from './dto/update-account.dto';
 
 @Controller({
   path: 'account',
@@ -161,7 +163,7 @@ export class AccountController {
     );
   }
 
-  @Post('update-password')
+  @Patch('update-password')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.OK)
   async updatePassword(
@@ -170,5 +172,14 @@ export class AccountController {
   ) {
     const session: SessionEntity = (request as any).session;
     return this.accountService.updatePassword(session, body);
+  }
+
+  @Patch()
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async update(@Req() request: FastifyRequest, @Body() body: UpdateAccountDto) {
+    console.log(body);
+    const session: SessionEntity = (request as any).session;
+    return this.accountService.update(session, body);
   }
 }
