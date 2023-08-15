@@ -1,7 +1,7 @@
 import { Exclude, Expose } from 'class-transformer';
 import { Account, AccountFederatedIdentities, Provider } from '@prisma/client';
 import R2Service from '../../core/providers/r2.service';
-import { hidePhone } from '../../core/utils/util';
+import { hidePhone, unixTimestamp } from '../../core/utils/util';
 
 export class AccountEntity {
   @Exclude()
@@ -150,5 +150,16 @@ export class AccountEntity {
       this.isMFAWhatsappEnabled() ||
       this.isMFAAppEnabled()
     );
+  }
+
+  public isLoginByPasswordLocked() {
+    return (
+      this.raw.account.passwordLoginUnlocked?.getTime() > Date.now() ||
+      this.isLoginByMFALocked()
+    );
+  }
+
+  public isLoginByMFALocked() {
+    return this.raw.account.mfaLoginUnlocked?.getTime() > Date.now();
   }
 }

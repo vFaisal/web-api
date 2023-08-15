@@ -432,6 +432,10 @@ export class AccountService {
         passwordHash: await hash(d.newPassword, {
           version: argon2id,
         }),
+        passwordLoginUnlocked:
+          account.passwordLoginUnlocked?.getTime() > Date.now()
+            ? new Date()
+            : undefined,
       },
     });
   }

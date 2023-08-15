@@ -10,23 +10,25 @@ datasource db {
 }
 
 model Account {
-  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  publicId         String    @unique @db.VarChar(16)
-  displayName      String?   @db.VarChar(100)
-  countryCode      String    @db.Char(2)
-  photoHash        String?   @db.VarChar(32)
-  email            String    @unique @db.VarChar(320)
-  passwordHash     String?   @db.Text
-  emailVerifiedAt  DateTime  @db.Timestamp(0)
-  phoneCountryCode String?   @db.VarChar(4)
-  phoneNumber      String?   @db.VarChar(10)
-  phoneVerifiedAt  DateTime? @db.Timestamp(0)
-  mfaEmail         DateTime? @db.Timestamp(0)
-  mfaSMS           DateTime? @db.Timestamp(0)
-  mfaWhatsapp      DateTime? @db.Timestamp(0)
-  mfaAppKey        String?   @db.Char(16)
-  updatedAt        DateTime  @updatedAt @db.Timestamp(0)
-  createdAt        DateTime  @default(now()) @db.Timestamp(0)
+  id                    BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId              String    @unique @db.VarChar(16)
+  displayName           String?   @db.VarChar(100)
+  countryCode           String    @db.Char(2)
+  photoHash             String?   @db.VarChar(32)
+  email                 String    @unique @db.VarChar(320)
+  passwordHash          String?   @db.Text
+  emailVerifiedAt       DateTime  @db.Timestamp(0)
+  phoneCountryCode      String?   @db.VarChar(4)
+  phoneNumber           String?   @db.VarChar(10)
+  phoneVerifiedAt       DateTime? @db.Timestamp(0)
+  mfaEmail              DateTime? @db.Timestamp(0)
+  mfaSMS                DateTime? @db.Timestamp(0)
+  mfaWhatsapp           DateTime? @db.Timestamp(0)
+  mfaAppKey             String?   @db.Char(16)
+  passwordLoginUnlocked DateTime? @db.Timestamp(0)
+  mfaLoginUnlocked      DateTime? @db.Timestamp(0)
+  updatedAt             DateTime  @updatedAt @db.Timestamp(0)
+  createdAt             DateTime  @default(now()) @db.Timestamp(0)
 
   sessions            AccountSession[]
   federatedIdentities AccountFederatedIdentities[]

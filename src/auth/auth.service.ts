@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../core/providers/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { argon2id, hash, verify } from 'argon2';
+import { randomBytes } from 'crypto';
 import {
   generateNanoId,
   hideEmail,
@@ -34,6 +35,8 @@ export class AuthService {
     MFA_VERIFY_TOKEN: 10 * 60, // 10m (Seconds)
     PASSWORD_RECOVERY_TOKEN: 2 * 60 * 60, // 2h (Seconds)
   };
+  private static readonly FAILED_LOGIN_ATTEMPTS_LIMIT = 20;
+  private static readonly FAILED_LOGIN_ATTEMPTS_TTL = 25 * 60; // 30 mins time reset every attempt but the value the same.
   private static readonly PASSWORD_RECOVERY_BASE_URI =
     'https://account.project.faisal.gg/forgot-password';
 
@@ -64,14 +67,57 @@ export class AuthService {
           'The provided email address is not associated with any existing account.',
       });
 
+    if (!account.passwordHash)
+      throw new BadRequestException({
+        code: 'password_login_ineligible',
+        message:
+          'Your account is not eligible for password-based login. Please use the provider OAuth2 method to access your account.',
+      });
+
+    const safeAccountData = new AccountEntity(account);
+    if (safeAccountData.isLoginByPasswordLocked())
+      throw new BadRequestException({
+        code: 'account_temporarily_locked',
+        message:
+          'Due to excessive failed login attempts, your account is temporarily locked. It will be automatically unlocked within 2 to 24 hours.',
+      });
+
     const isVerifiedPassword = await verify(account.passwordHash, password, {
       version: argon2id,
     });
-    if (!isVerifiedPassword)
+    if (!isVerifiedPassword) {
+      const cacheKey = 'failedPasswordLoginAttempts:' + account.id;
+      const failedAttempts = await this.kv.get<number>(cacheKey);
+      if (failedAttempts >= AuthService.FAILED_LOGIN_ATTEMPTS_LIMIT) {
+        const unlockedTime = unixTimestamp(
+          (account.passwordLoginUnlocked?.getTime() >
+          unixTimestamp(-7 * 24 * 3600)
+            ? 12
+            : 2) *
+            60 *
+            60,
+          'DATE',
+        );
+        await this.prisma.account.updateMany({
+          where: {
+            id: account.id,
+          },
+          data: {
+            passwordLoginUnlocked: unlockedTime,
+          },
+        });
+      }
+      await this.kv.setex(
+        cacheKey,
+        AuthService.FAILED_LOGIN_ATTEMPTS_TTL,
+        failedAttempts + 1,
+      );
+
       throw new BadRequestException({
         code: 'invalid_credentials',
         message: 'The provided credentials are invalid.',
       });
+    }
 
     return this.createCredentials(
       account,
@@ -131,6 +177,14 @@ export class AuthService {
     force = false,
   ) {
     const safeAccountData = new AccountEntity(account);
+
+    if (safeAccountData.isLoginByMFALocked())
+      throw new BadRequestException({
+        code: 'account_temporarily_locked',
+        message:
+          'Due to excessive failed login attempts, your account is temporarily locked. It will be automatically unlocked within 2 to 24 hours.',
+      });
+
     if (safeAccountData.isMFAEnabled() && !force) {
       const token = generateNanoId();
       await this.kv.setex<MultiFactorLogin>(
@@ -374,7 +428,7 @@ export class AuthService {
       'data',
     );
 
-    const token = generateNanoId(64);
+    const token = generateNanoId(96);
     await this.kv.setex<PasswordRecoveryCache>(
       'passwordRecovery:' + token,
       AuthService.EXPIRATION.PASSWORD_RECOVERY_TOKEN,
@@ -426,8 +480,15 @@ export class AuthService {
         message:
           'The provided password format is invalid. Please use a password that adheres to the specified guidelines.',
       });
+    const account = await this.prisma.account.findUniqueOrThrow({
+      where: {
+        id: BigInt(recovery.accountId),
+      },
+    });
 
     await this.kv.del('passwordRecovery:' + token);
+
+    //Add Account Activity Log (Name: Recovery Password)
 
     await this.prisma.account.updateMany({
       where: {
@@ -438,6 +499,14 @@ export class AuthService {
         passwordHash: await hash(password, {
           version: argon2id,
         }),
+        mfaLoginUnlocked:
+          account.mfaLoginUnlocked?.getTime() > Date.now()
+            ? new Date()
+            : undefined,
+        passwordLoginUnlocked:
+          account.passwordLoginUnlocked?.getTime() > Date.now()
+            ? new Date()
+            : undefined,
       },
     });
   }

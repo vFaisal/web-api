@@ -23,10 +23,14 @@ import MultiFactorLoginStartVerificationDto, {
 import EmailVerificationService from '../../core/services/email-verification.service';
 import { UAParser } from 'ua-parser-js';
 import TotpService from '../../core/services/totp.service';
+import ThrottlerService from '../../core/security/throttler.service';
 
 @Injectable()
 export class MultiFactorService {
-  private static readonly ALLOWED_ATTEMPTS_TOTP = 10;
+  private static readonly ALLOWED_TOTP_ATTEMPTS = 10;
+
+  private static readonly FAILED_ATTEMPTS_LIMIT = 20;
+  private static readonly FAILED_ATTEMPTS_TTL = 45 * 60;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -35,6 +39,7 @@ export class MultiFactorService {
     private readonly emailVerificationService: EmailVerificationService,
     private readonly authService: AuthService,
     private readonly totpService: TotpService,
+    private readonly throttler: ThrottlerService,
   ) {}
 
   private async createCredentials(
@@ -109,6 +114,13 @@ export class MultiFactorService {
 
     const safeAccountData = new AccountEntity(account);
 
+    if (safeAccountData.isLoginByMFALocked())
+      throw new BadRequestException({
+        code: 'account_temporarily_locked',
+        message:
+          'Due to excessive failed login attempts, your account is temporarily locked. It will be automatically unlocked within 2 to 24 hours.',
+      });
+
     if (['voice', 'sms', 'whatsapp'].includes(data.method)) {
       if (
         (!safeAccountData.isMFASMSEnabled() &&
@@ -121,12 +133,14 @@ export class MultiFactorService {
             'The requested Multi-Factor Authentication method is not available or cannot be used for the current account. Please try another available MFA method.',
         });
 
-      if (data.phoneNumber !== safeAccountData.phone.full)
+      if (data.phoneNumber !== safeAccountData.phone.full) {
+        await this.handleThrottler(account, 2);
         throw new BadRequestException({
           code: 'mfa_phone_number_not_matches',
           message:
             'The provided phone number does not match the registered phone number for this account.',
         });
+      }
 
       const phoneVerificationToken = await this.phoneVerificationService.start(
         safeAccountData.raw.account.id,
@@ -227,6 +241,13 @@ export class MultiFactorService {
 
     const safeAccountData = new AccountEntity(account);
 
+    if (safeAccountData.isLoginByMFALocked())
+      throw new BadRequestException({
+        code: 'account_temporarily_locked',
+        message:
+          'Due to excessive failed login attempts, your account is temporarily locked. It will be automatically unlocked within 2 to 24 hours.',
+      });
+
     if (
       (['sms', 'voice'].includes(data.method) &&
         !safeAccountData.isMFASMSEnabled()) ||
@@ -296,6 +317,13 @@ export class MultiFactorService {
 
     const safeAccountData = new AccountEntity(account);
 
+    if (safeAccountData.isLoginByMFALocked())
+      throw new BadRequestException({
+        code: 'account_temporarily_locked',
+        message:
+          'Due to excessive failed login attempts, your account is temporarily locked. It will be automatically unlocked within 2 to 24 hours.',
+      });
+
     if (!safeAccountData.isMFAAppEnabled())
       throw new BadRequestException({
         code: 'mfa_method_not_available',
@@ -303,7 +331,9 @@ export class MultiFactorService {
           'The requested Multi-Factor Authentication method is not available or cannot be used for the current account.',
       });
 
-    if (multiFactorLogin.totpAttempts >= 10)
+    if (
+      multiFactorLogin.totpAttempts >= MultiFactorService.ALLOWED_TOTP_ATTEMPTS
+    )
       throw new HttpException(
         {
           code: 'mfa_rate_limit_exceeded',
@@ -327,12 +357,16 @@ export class MultiFactorService {
       this.totpService.createSecret(account.mfaAppKey),
     );
 
-    if (generatedCode !== code)
+    if (generatedCode !== code) {
+      await this.handleThrottler(account, 1);
       throw new BadRequestException({
         code: 'invalid_totp_code',
         message:
           "The TOTP code you entered is invalid. Make sure you're using the correct code from your authenticator app.",
       });
+    }
+
+    await this.kv.del('failedMultiFactorLoginAttempts:' + account.id);
 
     return this.createCredentials(
       account,
@@ -365,6 +399,13 @@ export class MultiFactorService {
 
     const safeAccountData = new AccountEntity(account);
 
+    if (safeAccountData.isLoginByMFALocked())
+      throw new BadRequestException({
+        code: 'account_temporarily_locked',
+        message:
+          'Due to excessive failed login attempts, your account is temporarily locked. It will be automatically unlocked within 2 to 24 hours.',
+      });
+
     if (
       (['sms', 'voice'].includes(multiFactorVerification.method) &&
         !safeAccountData.isMFASMSEnabled()) ||
@@ -381,13 +422,25 @@ export class MultiFactorService {
 
     if (['sms', 'whatsapp', 'voice'].includes(multiFactorVerification.method)) {
       const fullNumber = '+' + account.phoneCountryCode + account.phoneNumber;
-      await this.phoneVerificationService.verify(
-        fullNumber,
-        account.id,
-        multiFactorVerification.verificationToken,
-        code,
-        'two-factor',
-      );
+      await this.phoneVerificationService
+        .verify(
+          fullNumber,
+          account.id,
+          multiFactorVerification.verificationToken,
+          code,
+          'two-factor',
+        )
+        .catch(async (err) => {
+          if (
+            err instanceof HttpException &&
+            (err.getResponse() as any)?.code ===
+              'invalid_phone_verification_code'
+          )
+            await this.handleThrottler(account, 2);
+          throw err;
+        });
+
+      await this.kv.del('failedMultiFactorLoginAttempts:' + account.id);
 
       return this.createCredentials(
         account,
@@ -396,13 +449,25 @@ export class MultiFactorService {
         multiFactorVerification.sessionType,
       );
     } else if (multiFactorVerification.method === 'email') {
-      await this.emailVerificationService.verify(
-        code,
-        multiFactorVerification.verificationToken,
-        account.email,
-        'mfa_login',
-        account.id,
-      );
+      await this.emailVerificationService
+        .verify(
+          code,
+          multiFactorVerification.verificationToken,
+          account.email,
+          'mfa_login',
+          account.id,
+        )
+        .catch(async (err) => {
+          if (
+            err instanceof HttpException &&
+            (err.getResponse() as any)?.code ===
+              'invalid_email_verification_code'
+          )
+            await this.handleThrottler(account, 2);
+          throw err;
+        });
+
+      await this.kv.del('failedMultiFactorLoginAttempts:' + account.id);
 
       return this.createCredentials(
         account,
@@ -417,6 +482,34 @@ export class MultiFactorService {
       message:
         'You are not authorized to use the requested MFA method for this endpoint.',
     });
+  }
+
+  public async handleThrottler(account: Account, increment = 1) {
+    const cacheKey = 'failedMultiFactorLoginAttempts:' + account.id;
+    const failedAttempts = await this.kv.get<number>(cacheKey);
+    if (failedAttempts >= MultiFactorService.FAILED_ATTEMPTS_LIMIT) {
+      const unlockedTime = unixTimestamp(
+        (account.mfaLoginUnlocked?.getTime() > unixTimestamp(-7 * 24 * 3600)
+          ? 18
+          : 6) *
+          60 *
+          60,
+        'DATE',
+      );
+      await this.prisma.account.updateMany({
+        where: {
+          id: account.id,
+        },
+        data: {
+          mfaLoginUnlocked: unlockedTime,
+        },
+      });
+    }
+    await this.kv.setex(
+      cacheKey,
+      MultiFactorService.FAILED_ATTEMPTS_TTL,
+      failedAttempts + increment,
+    );
   }
 }
 
