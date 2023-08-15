@@ -10,7 +10,7 @@ import RedisService from '../providers/redis.service';
 import TwilioService, {
   VerificationChannel,
 } from '../providers/twilio.service';
-import { generateNanoId } from '../utils/util';
+import { generateNanoId, unixTimestamp } from '../utils/util';
 import ThrottlerService from '../security/throttler.service';
 
 @Injectable()
@@ -24,6 +24,7 @@ export default class PhoneVerificationService {
   private readonly logger: Logger = new Logger('PhoneVerificationService');
 
   public static readonly VERIFICATION_EXPIRATION = 60 * 10;
+  private static readonly RESEND_COOLDOWN = 30; //Seconds;
 
   private cacheKey(phoneNumber: string) {
     return 'phoneVerification:' + phoneNumber;
@@ -120,7 +121,10 @@ export default class PhoneVerificationService {
       (verification.send_code_attempts as any[]).at(-1).time,
     );
 
-    if (lastAttemptTimestampDate > Date.now() - 30 * 1000)
+    if (
+      lastAttemptTimestampDate >
+      Date.now() - PhoneVerificationService.RESEND_COOLDOWN * 1000
+    )
       throw new BadRequestException({
         code: 'resend_phone_verification_cooldown',
         message:
@@ -128,6 +132,10 @@ export default class PhoneVerificationService {
       });
 
     await this.twilioService.createNewVerification(phoneNumber, channel);
+
+    return {
+      nextResend: unixTimestamp(PhoneVerificationService.RESEND_COOLDOWN),
+    };
   }
 
   public async verify(

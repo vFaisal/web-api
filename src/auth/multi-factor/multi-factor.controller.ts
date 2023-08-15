@@ -36,7 +36,7 @@ export class MultiFactorController {
   }
 
   @Post('verify/totp')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.CREATED)
   public verifyTOTP(
     @Req() req: FastifyRequest,
     @Body('token', new ParseNanoidPipe(16)) token: string,
@@ -64,7 +64,7 @@ export class MultiFactorController {
   }
 
   @Post('verify')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.CREATED)
   public verify(
     @Req() req: FastifyRequest,
     @Body('token', new ParseNanoidPipe(16)) token: string,
