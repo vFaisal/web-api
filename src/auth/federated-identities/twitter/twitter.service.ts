@@ -100,6 +100,7 @@ export class TwitterService {
   public redirectAuthEndpointUrl(
     state: string,
     codeChallenge: string,
+    redirectUri?: string,
     selectAccount = false,
   ) {
     const params = new URLSearchParams({
@@ -107,7 +108,7 @@ export class TwitterService {
       response_type: 'code',
       state: state,
       scope: TwitterService.APPLICATION_SCOPES.join(' '),
-      redirect_uri: TwitterService.REDIRECT_URI,
+      redirect_uri: redirectUri ?? TwitterService.REDIRECT_URI,
       code_challenge: codeChallenge,
       code_challenge_method: 's256',
     });

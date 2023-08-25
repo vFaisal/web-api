@@ -7,5 +7,6 @@ import { FederatedIdentitiesModule } from '../federated-identities.module';
   controllers: [FacebookController],
   providers: [FacebookService],
   imports: [forwardRef(() => FederatedIdentitiesModule)],
+  exports: [FacebookService],
 })
 export class FacebookModule {}

@@ -120,4 +120,5 @@ enum Provider {
   META
   MICROSOFT
   TWITTER
+  GITHUB
 }

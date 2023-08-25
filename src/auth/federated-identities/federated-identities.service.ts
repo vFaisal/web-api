@@ -177,3 +177,10 @@ export class FederatedIdentitiesService {
     };
   }
 }
+
+export interface OAuth2Data {
+  email: string;
+  id: string;
+  photo: string;
+  name: string;
+}

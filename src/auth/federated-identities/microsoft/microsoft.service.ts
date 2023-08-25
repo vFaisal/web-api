@@ -5,8 +5,10 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { FederatedIdentitiesService } from '../federated-identities.service';
+import {
+  FederatedIdentitiesService,
+  OAuth2Data,
+} from '../federated-identities.service';
 import { SignificantRequestInformation } from '../../../core/utils/util';
 import { Provider } from '@prisma/client';
 
@@ -32,6 +34,25 @@ export class MicrosoftService {
     significantRequestInformation: SignificantRequestInformation,
   ) {
     //exchange code here//
+    const data = await this.exchangeAuthorizationCodeAndGetUserData(
+      code,
+      codeVerifier,
+    );
+
+    return this.federatedIdentitiesService.authenticate(
+      data.email,
+      data.id,
+      Provider.MICROSOFT,
+      data.photo,
+      data.name,
+      significantRequestInformation,
+    );
+  }
+
+  public async exchangeAuthorizationCodeAndGetUserData(
+    code: string,
+    codeVerifier: string,
+  ): Promise<OAuth2Data> {
     const auth = await this.exchangeAuthorizationCode(code, codeVerifier);
 
     const userInfo =
@@ -40,14 +61,12 @@ export class MicrosoftService {
       );
     const photo = await this.getProfilePhoto(auth.access_token);
 
-    return this.federatedIdentitiesService.authenticate(
-      userInfo.email,
-      userInfo.sub,
-      Provider.MICROSOFT,
-      photo,
-      userInfo.name,
-      significantRequestInformation,
-    );
+    return {
+      email: userInfo.email,
+      id: userInfo.sub,
+      name: userInfo.name,
+      photo: photo,
+    };
   }
 
   public async exchangeAuthorizationCode(code: string, codeVerifier: string) {
@@ -122,6 +141,7 @@ export class MicrosoftService {
   public redirectAuthEndpointUrl(
     state: string,
     codeChallenge: string,
+    redirectUri?: string,
     selectAccount = false,
   ) {
     const params = new URLSearchParams({
@@ -130,7 +150,7 @@ export class MicrosoftService {
       state: state,
       scope: MicrosoftService.APPLICATION_SCOPES.join(' '),
       //prompt: selectAccount ? "select_account" : "consent",
-      redirect_uri: MicrosoftService.REDIRECT_URI,
+      redirect_uri: redirectUri ?? MicrosoftService.REDIRECT_URI,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
     });

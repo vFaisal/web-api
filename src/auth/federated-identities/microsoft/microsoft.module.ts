@@ -7,5 +7,6 @@ import { FederatedIdentitiesModule } from '../federated-identities.module';
   controllers: [MicrosoftController],
   providers: [MicrosoftService],
   imports: [forwardRef(() => FederatedIdentitiesModule)],
+  exports: [MicrosoftService],
 })
 export class MicrosoftModule {}

@@ -5,7 +5,10 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FederatedIdentitiesService } from '../federated-identities.service';
+import {
+  FederatedIdentitiesService,
+  OAuth2Data,
+} from '../federated-identities.service';
 import { SignificantRequestInformation } from '../../../core/utils/util';
 import { Provider } from '@prisma/client';
 
@@ -27,6 +30,21 @@ export class GithubService {
     code: string,
     significantRequestInformation: SignificantRequestInformation,
   ) {
+    const data = await this.exchangeAuthorizationCodeAndGetUserData(code);
+
+    return this.federatedIdentitiesService.authenticate(
+      data.email,
+      data.id,
+      Provider.GITHUB,
+      data.photo,
+      data.name,
+      significantRequestInformation,
+    );
+  }
+
+  public async exchangeAuthorizationCodeAndGetUserData(
+    code: string,
+  ): Promise<OAuth2Data> {
     const auth = await this.exchangeAuthorizationCode(code);
 
     const user = await this.getUser(auth.access_token);
@@ -40,14 +58,12 @@ export class GithubService {
           "The user's Github account email address is not verified and cannot be used for authentication.",
       });
 
-    return this.federatedIdentitiesService.authenticate(
-      userPrimaryEmail.email,
-      String(user.id),
-      Provider.MICROSOFT,
-      user.avatar_url,
-      user.name,
-      significantRequestInformation,
-    );
+    return {
+      email: userPrimaryEmail.email,
+      id: String(user.id),
+      name: user.name,
+      photo: user.avatar_url,
+    };
   }
 
   public async exchangeAuthorizationCode(code: string) {
@@ -94,7 +110,7 @@ export class GithubService {
     return data;
   }
 
-  private async getUser(accessToken: string) {
+  public async getUser(accessToken: string) {
     const res = await fetch('https://api.github.com/user', {
       headers: {
         authorization: 'Bearer ' + accessToken,
@@ -112,7 +128,7 @@ export class GithubService {
     return data;
   }
 
-  private async getUserEmails(accessToken: string) {
+  public async getUserEmails(accessToken: string) {
     const res = await fetch('https://api.github.com/user/emails', {
       headers: {
         authorization: 'Bearer ' + accessToken,
@@ -130,13 +146,13 @@ export class GithubService {
     return data;
   }
 
-  public redirectAuthEndpointUrl(state: string) {
+  public redirectAuthEndpointUrl(state: string, redirectUri?: string) {
     const params = new URLSearchParams({
       client_id: this.config.getOrThrow('GITHUB_CLIENT_ID'),
       // response_type: "code",
       state: state,
       scope: GithubService.APPLICATION_SCOPES.join(' '),
-      redirect_uri: GithubService.REDIRECT_URI,
+      redirect_uri: redirectUri ?? GithubService.REDIRECT_URI,
     });
     return GithubService.AUTH_ENDPOINT + '?' + params.toString();
   }

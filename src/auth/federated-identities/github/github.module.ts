@@ -7,5 +7,6 @@ import { FederatedIdentitiesModule } from '../federated-identities.module';
   controllers: [GithubController],
   providers: [GithubService],
   imports: [forwardRef(() => FederatedIdentitiesModule)],
+  exports: [GithubService],
 })
 export class GithubModule {}

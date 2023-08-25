@@ -5,14 +5,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
-import { AuthService } from '../../auth.service';
-import { FederatedIdentitiesService } from '../federated-identities.service';
-import { Provider } from '@prisma/client';
 import {
-  SignificantRequestInformation,
-  significantRequestInformation,
-} from '../../../core/utils/util';
+  FederatedIdentitiesService,
+  OAuth2Data,
+} from '../federated-identities.service';
+import { Provider } from '@prisma/client';
+import { SignificantRequestInformation } from '../../../core/utils/util';
 
 @Injectable()
 export class GoogleService {
@@ -39,6 +37,25 @@ export class GoogleService {
     significantRequestInformation: SignificantRequestInformation,
   ) {
     //exchange code here//
+    const data = await this.exchangeAuthorizationCodeAndGetUserData(
+      code,
+      codeVerifier,
+    );
+
+    return this.federatedIdentitiesService.authenticate(
+      data.email,
+      data.id,
+      Provider.GOOGLE,
+      data.photo,
+      data.name,
+      significantRequestInformation,
+    );
+  }
+
+  public async exchangeAuthorizationCodeAndGetUserData(
+    code: string,
+    codeVerifier: string,
+  ): Promise<OAuth2Data> {
     const auth = await this.exchangeAuthorizationCode(code, codeVerifier);
 
     const userInfo =
@@ -53,14 +70,12 @@ export class GoogleService {
           "The user's Google account email address is not verified and cannot be used for authentication.",
       });
 
-    return this.federatedIdentitiesService.authenticate(
-      userInfo.email,
-      userInfo.sub,
-      Provider.GOOGLE,
-      userInfo.picture,
-      userInfo.name,
-      significantRequestInformation,
-    );
+    return {
+      email: userInfo.email,
+      id: userInfo.sub,
+      name: userInfo.name,
+      photo: userInfo.picture,
+    };
   }
 
   public async exchangeAuthorizationCode(code: string, codeVerifier: string) {
@@ -111,8 +126,10 @@ export class GoogleService {
   public redirectAuthEndpointUrl(
     state: string,
     codeChallenge: string,
+    redirectUri: string | null = null,
     selectAccount = false,
   ) {
+    console.log(this.config);
     const params = new URLSearchParams({
       client_id: this.config.getOrThrow('GOOGLE_CLIENT_ID'),
       response_type: 'code',
@@ -121,7 +138,7 @@ export class GoogleService {
       access_type: 'offline',
       include_granted_scopes: 'true',
       prompt: selectAccount ? 'select_account' : 'none',
-      redirect_uri: GoogleService.REDIRECT_URI,
+      redirect_uri: redirectUri ?? GoogleService.REDIRECT_URI,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
     });

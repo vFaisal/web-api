@@ -7,5 +7,6 @@ import { FederatedIdentitiesModule } from '../federated-identities.module';
   controllers: [TwitterController],
   providers: [TwitterService],
   imports: [forwardRef(() => FederatedIdentitiesModule)],
+  exports: [TwitterService],
 })
 export class TwitterModule {}

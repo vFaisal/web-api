@@ -5,7 +5,10 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { FederatedIdentitiesService } from '../federated-identities.service';
+import {
+  FederatedIdentitiesService,
+  OAuth2Data,
+} from '../federated-identities.service';
 import {
   SignificantRequestInformation,
   unixTimestamp,
@@ -39,6 +42,25 @@ export class FacebookService {
     significantRequestInformation: SignificantRequestInformation,
   ) {
     //exchange code here//
+    const data = await this.exchangeAuthorizationCodeAndGetUserData(
+      code,
+      codeVerifier,
+    );
+
+    return this.federatedIdentitiesService.authenticate(
+      data.email,
+      data.id,
+      Provider.META,
+      data.photo,
+      data.name,
+      significantRequestInformation,
+    );
+  }
+
+  public async exchangeAuthorizationCodeAndGetUserData(
+    code: string,
+    codeVerifier: string,
+  ): Promise<OAuth2Data> {
     const auth = await this.exchangeAuthorizationCode(code, codeVerifier);
 
     const userInfo =
@@ -50,14 +72,12 @@ export class FacebookService {
     const picture =
       (await this.getProfilePicture(auth.access_token)) ?? userInfo.picture;
 
-    return this.federatedIdentitiesService.authenticate(
-      userInfo.email,
-      userInfo.sub,
-      Provider.META,
-      picture,
-      userInfo.name,
-      significantRequestInformation,
-    );
+    return {
+      email: userInfo.email,
+      id: userInfo.sub,
+      name: userInfo.name,
+      photo: picture,
+    };
   }
 
   public async exchangeAuthorizationCode(code: string, codeVerifier: string) {
@@ -119,6 +139,7 @@ export class FacebookService {
   public redirectAuthEndpointUrl(
     state: string,
     codeChallenge: string,
+    redirectUri?: string,
     selectAccount = false,
   ) {
     const params = new URLSearchParams({
@@ -126,7 +147,7 @@ export class FacebookService {
       response_type: 'code',
       state: state,
       scope: FacebookService.APPLICATION_SCOPES.join(' '),
-      redirect_uri: FacebookService.REDIRECT_URI,
+      redirect_uri: redirectUri ?? FacebookService.REDIRECT_URI,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
     });

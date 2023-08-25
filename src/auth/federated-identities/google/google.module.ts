@@ -7,5 +7,6 @@ import { FederatedIdentitiesModule } from '../federated-identities.module';
   controllers: [GoogleController],
   providers: [GoogleService],
   imports: [forwardRef(() => FederatedIdentitiesModule)],
+  exports: [GoogleService],
 })
 export class GoogleModule {}
