@@ -162,4 +162,8 @@ export class AccountEntity {
   public isLoginByMFALocked() {
     return this.raw.account.mfaLoginUnlocked?.getTime() > Date.now();
   }
+
+  public isPasswordLess() {
+    return !this.raw.account.passwordHash;
+  }
 }

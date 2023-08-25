@@ -8,10 +8,14 @@ import { Reflector } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
 import RedisService from '../providers/redis.service';
 import CSRFService from './csrf.service';
+import { Provider } from '@prisma/client';
 
 @Injectable()
 export default class CSRFGuard implements CanActivate {
-  constructor(private reflector: Reflector, private csrfService: CSRFService) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly csrfService: CSRFService,
+  ) {}
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
     const suffix = this.reflector.get<string>(
@@ -36,7 +40,6 @@ export default class CSRFGuard implements CanActivate {
         message:
           'The request you sent was rejected due to an invalid CSRF token. Please ensure that the token you are using is up to date and try again.',
       });
-
     return true;
   }
 

@@ -59,8 +59,11 @@ export class AccountService {
       where: {
         id: id,
       },
+      include: {
+        federatedIdentities: true,
+      },
     });
-    return new AccountEntity(account);
+    return new AccountEntity(account, account.federatedIdentities);
   }
 
   public async uploadPhoto(file: MultipartFile, session: SessionEntity) {

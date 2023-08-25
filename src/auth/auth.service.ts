@@ -67,14 +67,15 @@ export class AuthService {
           'The provided email address is not associated with any existing account.',
       });
 
-    if (!account.passwordHash)
+    const safeAccountData = new AccountEntity(account);
+
+    if (safeAccountData.isPasswordLess())
       throw new BadRequestException({
         code: 'password_login_ineligible',
         message:
           'Your account is not eligible for password-based login. Please use the provider OAuth2 method to access your account.',
       });
 
-    const safeAccountData = new AccountEntity(account);
     if (safeAccountData.isLoginByPasswordLocked())
       throw new BadRequestException({
         code: 'account_temporarily_locked',
