@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -20,7 +21,6 @@ import FederatedIdentityQueryDto from '../../auth/federated-identities/dto/feder
 import { PkceCodeVerifier } from '../../core/security/pkce.decorator';
 import SessionEntity from '../../auth/entities/session.entity';
 import { Provider } from '@prisma/client';
-import { convertEnumValuesToLowerCase } from '../../core/utils/util';
 
 @Controller({
   path: 'account/link',
@@ -39,13 +39,22 @@ export class LinkController {
     }
     return provider;
   }
-  @Get(['google', 'meta', 'microsoft', 'github' /*,"twitter/callback"*/])
+  @Get(['google', 'meta', 'microsoft', 'github' /*,"twitter"*/])
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.SEE_OTHER)
   public redirect(@Res() res: FastifyReply, @Req() req: FastifyRequest) {
     const provider = this.getProviderFromPath(req.routerPath);
     const session: SessionEntity = (req as any).session;
     return this.linkService.redirect(session, provider, req, res);
+  }
+
+  @Delete(['google', 'meta', 'microsoft', 'github' /*,"twitter"*/])
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  public unlink(@Req() req: FastifyRequest) {
+    const provider = this.getProviderFromPath(req.routerPath);
+    const session: SessionEntity = (req as any).session;
+    return this.linkService.unlink(session, provider);
   }
 
   @Get([

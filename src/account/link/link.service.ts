@@ -23,6 +23,7 @@ import { FacebookService } from '../../auth/federated-identities/facebook/facebo
 import { MicrosoftService } from '../../auth/federated-identities/microsoft/microsoft.service';
 import { GithubService } from '../../auth/federated-identities/github/github.service';
 import { TwitterService } from '../../auth/federated-identities/twitter/twitter.service';
+import { AccountEntity } from '../entities/account.entity';
 
 @Injectable()
 export class LinkService {
@@ -149,7 +150,7 @@ export class LinkService {
       });
     if (federatedIdentity)
       throw new BadRequestException({
-        code: 'account_already_linked',
+        code: 'federated_identity_already_linked',
         message: `You've already linked a ${capitalize(
           provider,
         )} Sign-In to your account.`,
@@ -167,12 +168,49 @@ export class LinkService {
       .catch((err: Prisma.PrismaClientKnownRequestError) => {
         if (err.code == 'P2002')
           throw new ConflictException({
-            code: 'already_linked',
+            code: 'federated_identity_already_linked',
             message: `${capitalize(
               provider,
             )} Sign-In is associated with another account.`,
           });
         throw new ServiceUnavailableException();
       });
+  }
+
+  public async unlink(session: SessionEntity, provider: Provider) {
+    const account = await this.prismaService.account.findUniqueOrThrow({
+      where: {
+        id: session.getAccount().id,
+      },
+      include: {
+        federatedIdentities: true,
+      },
+    });
+    const safeAccountData = new AccountEntity(account);
+
+    if (
+      safeAccountData.isPasswordLess() &&
+      account.federatedIdentities.length <= 1
+    )
+      throw new BadRequestException({
+        code: 'unlink_unavailable',
+        message: `Unlinking is not available for your account. Your account is passwordless and has only one federated identity linked.`,
+      });
+
+    const federatedIdentity = account.federatedIdentities.find(
+      (f) => f.provider === provider,
+    );
+
+    if (!federatedIdentity)
+      throw new BadRequestException({
+        code: 'federated_identity_not_linked',
+        message: `The federated identity you're attempting to unlink is not associated with your account.`,
+      });
+
+    await this.prismaService.accountFederatedIdentities.delete({
+      where: {
+        id: federatedIdentity.id,
+      },
+    });
   }
 }
