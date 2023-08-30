@@ -1,8 +1,8 @@
 import { customAlphabet } from 'nanoid';
-import { Request } from 'express';
 import { lookup } from 'geoip-lite';
 import { UAParser } from 'ua-parser-js';
 import Constants from './constants';
+import { FastifyRequest } from 'fastify';
 
 export function generateNanoId(size = 16): string {
   return customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', size)();
@@ -37,7 +37,7 @@ export type SignificantRequestInformation = {
 };
 
 export function significantRequestInformation(
-  req: Request,
+  req: FastifyRequest,
 ): SignificantRequestInformation {
   const ipAddress = req.ip;
   const geo = lookup(ipAddress);
