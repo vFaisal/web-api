@@ -24,6 +24,10 @@ import { significantRequestInformation } from '../core/utils/util';
 import VerifyUpdateEmailDto from './dto/verify-update-email.dto';
 import UpdatePasswordDto from './dto/update-password.dto';
 import UpdateAccountDto from './dto/update-account.dto';
+import {
+  AccessLevel,
+  Authorization,
+} from '../core/security/authorization.decorator';
 
 @Controller({
   path: 'account',
@@ -33,7 +37,7 @@ export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
   @Get()
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.NONE)
   @HttpCode(HttpStatus.OK)
   getAccount(@Req() request) {
     const session: SessionEntity = request.session;
@@ -41,7 +45,7 @@ export class AccountController {
   }
 
   @Put('photo')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.NONE)
   @HttpCode(HttpStatus.CREATED)
   async uploadPhoto(@Req() request: FastifyRequest) {
     const file = await request.file();
@@ -50,7 +54,7 @@ export class AccountController {
   }
 
   @Delete('photo')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.NONE)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePhoto(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -58,7 +62,7 @@ export class AccountController {
   }
 
   @Delete('phone')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePhone(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -66,7 +70,7 @@ export class AccountController {
   }
 
   @Post('update-phone/start-verification')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.CREATED)
   async updatePhone(
     @Req() request: FastifyRequest,
@@ -81,7 +85,7 @@ export class AccountController {
   }
 
   @Post('update-phone/verify')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   async verifyPhone(
     @Req() request: FastifyRequest,
@@ -98,7 +102,7 @@ export class AccountController {
   }
 
   @Post('update-phone/resend')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.CREATED)
   async resendPhoneVerification(
     @Req() request: FastifyRequest,
@@ -115,7 +119,7 @@ export class AccountController {
   }
 
   @Post('update-email')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.CREATED)
   async updateEmail(
     @Req() request: FastifyRequest,
@@ -130,7 +134,7 @@ export class AccountController {
   }
 
   @Post('update-email/verify')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   async verifyUpdateEmail(
     @Req() request: FastifyRequest,
@@ -147,7 +151,7 @@ export class AccountController {
   }
 
   @Post('update-email/resend')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.CREATED)
   async resendUpdateEmail(
     @Req() request: FastifyRequest,
@@ -164,7 +168,7 @@ export class AccountController {
   }
 
   @Patch('update-password')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.OK)
   async updatePassword(
     @Req() request: FastifyRequest,
@@ -175,7 +179,7 @@ export class AccountController {
   }
 
   @Patch()
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(@Req() request: FastifyRequest, @Body() body: UpdateAccountDto) {
     console.log(body);

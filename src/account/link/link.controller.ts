@@ -21,6 +21,10 @@ import FederatedIdentityQueryDto from '../../auth/federated-identities/dto/feder
 import { PkceCodeVerifier } from '../../core/security/pkce.decorator';
 import SessionEntity from '../../auth/entities/session.entity';
 import { Provider } from '@prisma/client';
+import {
+  AccessLevel,
+  Authorization,
+} from '../../core/security/authorization.decorator';
 
 @Controller({
   path: 'account/link',
@@ -40,7 +44,7 @@ export class LinkController {
     return provider;
   }
   @Get(['google', 'meta', 'microsoft', 'github' /*,"twitter"*/])
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.SEE_OTHER)
   public redirect(@Res() res: FastifyReply, @Req() req: FastifyRequest) {
     const provider = this.getProviderFromPath(req.routerPath);
@@ -49,7 +53,7 @@ export class LinkController {
   }
 
   @Delete(['google', 'meta', 'microsoft', 'github' /*,"twitter"*/])
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public unlink(@Req() req: FastifyRequest) {
     const provider = this.getProviderFromPath(req.routerPath);
@@ -63,7 +67,7 @@ export class LinkController {
     'microsoft/callback' /*,"twitter/callback"*/,
   ])
   @CsrfProtection('link')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public link(
     @Query() query: FederatedIdentityQueryDto,
@@ -83,7 +87,7 @@ export class LinkController {
 
   @Get('github/callback')
   @CsrfProtection('link')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public linkGithub(
     @Query() query: FederatedIdentityQueryDto,

@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  HttpException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -8,7 +7,6 @@ import {
 import { PrismaService } from '../core/providers/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { argon2id, hash, verify } from 'argon2';
-import { randomBytes } from 'crypto';
 import {
   generateNanoId,
   hideEmail,
@@ -18,13 +16,13 @@ import {
 import { Account, SessionType } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import SessionEntity from './entities/session.entity';
-import { FastifyReply, FastifyRequest } from 'fastify';
 import RedisService from '../core/providers/redis.service';
 import { AccountEntity } from '../account/entities/account.entity';
 import { MultiFactorLogin } from './multi-factor/multi-factor.service';
 import ThrottlerService from '../core/security/throttler.service';
 import Constants from '../core/utils/constants';
 import SendgridService from '../core/providers/sendgrid.service';
+import { AccessLevel } from '../core/security/authorization.decorator';
 
 @Injectable()
 export class AuthService {
@@ -167,6 +165,7 @@ export class AuthService {
           pid: jwtPayload.sub,
         },
         cta: unixTimestamp(),
+        lvl: AccessLevel.NONE,
       }),
     );
   }
@@ -323,6 +322,7 @@ export class AuthService {
         message: 'The provided refresh token is invalid or expired.',
       });
 
+    //Delete old Access
     await this.kv.del(`session:${refreshTokenPayload.spi}`);
 
     const jwt = await this.createJWT(tokenSession.session.account.publicId);

@@ -16,6 +16,10 @@ import { FastifyRequest } from 'fastify';
 import SessionEntity from '../../auth/entities/session.entity';
 import { AuthGuard } from '../../auth/auth.guard';
 import VerifyTotpEntity from './dto/verify-totp.entity';
+import {
+  AccessLevel,
+  Authorization,
+} from '../../core/security/authorization.decorator';
 
 @Controller({
   path: 'account/multi-factor',
@@ -25,7 +29,7 @@ export class MfaController {
   constructor(private readonly multiFactorService: MultiFactorService) {}
 
   @Post('totp')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.OK)
   public configureTOTP(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -33,7 +37,7 @@ export class MfaController {
   }
 
   @Patch('totp')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public verifyTOTP(
     @Req() request: FastifyRequest,
@@ -44,7 +48,7 @@ export class MfaController {
   }
 
   @Delete('totp')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableTOTP(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -52,7 +56,7 @@ export class MfaController {
   }
 
   @Post('sms')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public enableSMS(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -60,7 +64,7 @@ export class MfaController {
   }
 
   @Delete('sms')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableSMS(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -68,7 +72,7 @@ export class MfaController {
   }
 
   @Post('whatsapp')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public enableWhatsapp(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -76,7 +80,7 @@ export class MfaController {
   }
 
   @Delete('whatsapp')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableWhatsapp(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -84,7 +88,7 @@ export class MfaController {
   }
 
   @Post('email')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public enableEmail(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -92,7 +96,7 @@ export class MfaController {
   }
 
   @Delete('email')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableEmail(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;

@@ -14,6 +14,10 @@ import { AuthGuard } from '../../auth/auth.guard';
 import { FastifyRequest } from 'fastify';
 import SessionEntity from '../../auth/entities/session.entity';
 import ParseNanoidPipe from '../../shared/pipes/parse-nanoid.pipe';
+import {
+  AccessLevel,
+  Authorization,
+} from '../../core/security/authorization.decorator';
 
 @Controller({
   path: 'account/sessions',
@@ -23,7 +27,7 @@ export class SessionsController {
   constructor(private readonly sessionService: SessionsService) {}
 
   @Get()
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.NONE)
   @HttpCode(HttpStatus.OK)
   getSessions(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
@@ -31,7 +35,7 @@ export class SessionsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteSession(
     @Req() request: FastifyRequest,
@@ -42,7 +46,7 @@ export class SessionsController {
   }
 
   @Delete()
-  @UseGuards(AuthGuard)
+  @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteSessions(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;

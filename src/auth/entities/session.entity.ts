@@ -1,4 +1,7 @@
+import { AccessLevel } from '../../core/security/authorization.decorator';
+
 export default class SessionEntity {
+  private lvl: AccessLevel;
   private readonly ppi: string; // Primary Public Id (From AccountSession table)
   private readonly spi: string; // Secondary Public Id (From AccountSessionToken table)
   private readonly tkn: string; // This token for refresh token.
@@ -18,6 +21,7 @@ export default class SessionEntity {
       pid: string;
     };
     cta: number;
+    lvl: AccessLevel;
   }) {
     this.ppi = data?.ppi;
     this.spi = data?.spi;
@@ -27,6 +31,7 @@ export default class SessionEntity {
       pid: data?.act.pid,
     };
     this.cta = data?.cta;
+    this.lvl = data?.lvl ?? AccessLevel.NONE;
   }
 
   public isValid(): boolean {
@@ -38,6 +43,14 @@ export default class SessionEntity {
       !!this.act?.pid &&
       !!this.cta
     );
+  }
+
+  public getAccessLevel(): AccessLevel {
+    return this.lvl ?? AccessLevel.NONE;
+  }
+
+  public setAccessLevel(level: AccessLevel) {
+    this.lvl = level;
   }
 
   public getPrimaryPublicId(): string {

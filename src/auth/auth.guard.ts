@@ -1,17 +1,21 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
 import { PrismaService } from '../core/providers/prisma.service';
 import SessionEntity from './entities/session.entity';
 import { ConfigService } from '@nestjs/config';
 import RedisService from '../core/providers/redis.service';
 import { AppJWTPayload } from './auth.service';
+import { Reflector } from '@nestjs/core';
+import { FastifyRequest } from 'fastify';
+import { AccessLevel } from '../core/security/authorization.decorator';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -22,10 +26,21 @@ export class AuthGuard implements CanActivate {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly kv: RedisService,
+    private reflector: Reflector,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+    const level = this.reflector.get<AccessLevel>(
+      'level',
+      context.getHandler(),
+    );
+    if (level === undefined) {
+      this.logger.error(
+        `${request.routerPath} Route not setup Authorization Level`,
+      );
+      throw new InternalServerErrorException();
+    }
     const token = this.extractTokenFromHeader(
       context.switchToHttp().getRequest(),
     );
@@ -49,10 +64,18 @@ export class AuthGuard implements CanActivate {
 
     request.session = session;
 
+    if (
+      (level === AccessLevel.HIGH &&
+        session.getAccessLevel() !== AccessLevel.HIGH) ||
+      (level === AccessLevel.MEDIUM &&
+        session.getAccessLevel() !== AccessLevel.MEDIUM)
+    )
+      throw new ForbiddenException();
+
     return true;
   }
 
-  private extractTokenFromHeader(request: Request): string | undefined {
+  private extractTokenFromHeader(request: FastifyRequest): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' && typeof token === 'string' ? token : undefined;
   }
