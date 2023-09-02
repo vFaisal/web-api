@@ -30,6 +30,7 @@ import { argon2id, hash, verify } from 'argon2';
 import ThrottlerService from '../core/security/throttler.service';
 import UpdateAccountDto from './dto/update-account.dto';
 import OpenaiService from '../core/providers/openai.service';
+import PasswordValidationService from '../core/services/password-validation.service';
 
 @Injectable()
 export class AccountService {
@@ -52,6 +53,7 @@ export class AccountService {
     private readonly emailVerificationService: EmailVerificationService,
     private readonly throttler: ThrottlerService,
     private readonly openai: OpenaiService,
+    private readonly passwordValidation: PasswordValidationService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {
@@ -405,27 +407,11 @@ export class AccountService {
       },
     });
 
-    await this.throttler.throwIfRateLimited(
-      'updatePasswordAttempts:' + session.getAccount().id,
-      AccountService.ATTEMPTS_UPDATE_PASSWORD_TTL,
-      AccountService.ATTEMPTS_UPDATE_PASSWORD_LIMIT,
-      'account',
-    );
-
-    const isVerifiedPassword = await verify(
-      account.passwordHash,
+    await this.passwordValidation.validatePasswordIfRateLimitedRevokeSession(
+      session,
+      account,
       d.currentPassword,
-      {
-        version: argon2id,
-      },
     );
-    if (!isVerifiedPassword) {
-      throw new BadRequestException({
-        code: 'current_password_mismatch',
-        message:
-          "The current password you provided does not match your account's current password.",
-      });
-    }
 
     this.prisma.account.updateMany({
       where: {

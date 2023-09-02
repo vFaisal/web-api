@@ -14,7 +14,10 @@ import { retry } from 'rxjs';
 
 @Injectable()
 export default class RecaptchaGuard implements CanActivate {
-  constructor(private config: ConfigService, private reflector: Reflector) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly reflector: Reflector,
+  ) {}
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
     if (this.config.getOrThrow('NODE_ENV') !== 'production') return true;
