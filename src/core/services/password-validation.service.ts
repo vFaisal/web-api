@@ -36,7 +36,7 @@ export default class PasswordValidationService {
           'Password validation cannot be performed on an account that is currently in passwordless mode.',
       });
 
-    const cacheKey = `validatePasswordAttempts:${session.getPrimaryPublicId()}`;
+    const cacheKey = `validatePasswordAttempts:session:${session.getPrimaryPublicId()}`;
 
     const throttler = await this.kv.get<ValidatePasswordThrottler>(cacheKey);
     if (throttler) {

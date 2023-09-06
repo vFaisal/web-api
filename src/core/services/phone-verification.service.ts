@@ -12,6 +12,7 @@ import TwilioService, {
 } from '../providers/twilio.service';
 import { generateNanoId, unixTimestamp } from '../utils/util';
 import ThrottlerService from '../security/throttler.service';
+import Constants from '../utils/constants';
 
 @Injectable()
 export default class PhoneVerificationService {
@@ -90,7 +91,16 @@ export default class PhoneVerificationService {
         accountId: String(accountId),
       },
     );
-    return token;
+    return {
+      phone: {
+        // countryCode: Constants.COUNTRIES[],
+        countryCallingCode: phone.countryCallingCode,
+        nationalNumber: phone.number,
+        fullNumber: fullPhoneNumber,
+      },
+      token: token,
+      expires: unixTimestamp(PhoneVerificationService.VERIFICATION_EXPIRATION),
+    };
   }
 
   public async resend(

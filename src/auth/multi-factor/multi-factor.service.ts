@@ -142,7 +142,7 @@ export class MultiFactorService {
         });
       }
 
-      const phoneVerificationToken = await this.phoneVerificationService.start(
+      const phoneVerification = await this.phoneVerificationService.start(
         safeAccountData.raw.account.id,
         {
           number: safeAccountData.phone.number,
@@ -161,7 +161,7 @@ export class MultiFactorService {
         AuthService.EXPIRATION.MFA_VERIFY_TOKEN,
         {
           accountId: String(safeAccountData.raw.account.id),
-          verificationToken: phoneVerificationToken,
+          verificationToken: phoneVerification.token,
           method: data.method,
           ref: token,
           sessionType: multiFactorLogin.sessionType,

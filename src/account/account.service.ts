@@ -209,7 +209,7 @@ export class AccountService {
           },
         });*/
 
-    const verificationToken = await this.phoneVerificationService.start(
+    const phoneVerification = await this.phoneVerificationService.start(
       session.getAccount().id,
       {
         number: phoneNumber,
@@ -219,15 +219,7 @@ export class AccountService {
       'updatePhone',
     );
 
-    return {
-      phone: {
-        countryCode: parsedPhoneNumber.country_code,
-        countryCallingCode: parsedPhoneNumber.calling_country_code,
-        nationalNumber: parsedPhoneNumber.phone_number.replace(' ', ''),
-      },
-      token: verificationToken,
-      expires: unixTimestamp(PhoneVerificationService.VERIFICATION_EXPIRATION),
-    };
+    return phoneVerification;
   }
 
   public async verifyPhone(
@@ -264,7 +256,7 @@ export class AccountService {
     token: string,
     channel: VerificationChannel,
   ) {
-    await this.phoneVerificationService.resend(
+    return this.phoneVerificationService.resend(
       internationalPhoneNumber,
       session.getAccount().id,
       token,
