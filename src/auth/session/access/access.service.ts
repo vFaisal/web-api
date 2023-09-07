@@ -59,6 +59,12 @@ export class AccessService {
     session: SessionEntity,
     password: string,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -71,7 +77,7 @@ export class AccessService {
     );
 
     session.setAccessLevel(AccessLevel.MEDIUM);
-    await this.generateAccessLevel(session);
+    await this.grantAccessLevel(session);
   }
 
   public getEmailMessage(
@@ -95,6 +101,12 @@ export class AccessService {
     session: SessionEntity,
     sri: SignificantRequestInformation,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -122,6 +134,12 @@ export class AccessService {
     code: string,
     token: string,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -136,7 +154,7 @@ export class AccessService {
     );
 
     session.setAccessLevel(AccessLevel.MEDIUM);
-    await this.generateAccessLevel(session);
+    await this.grantAccessLevel(session);
   }
 
   public async resendRequestMediumAccessLevelByEmail(
@@ -144,6 +162,12 @@ export class AccessService {
     sri: SignificantRequestInformation,
     token: string,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -163,6 +187,12 @@ export class AccessService {
     session: SessionEntity,
     channel: VerificationChannel,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -192,6 +222,12 @@ export class AccessService {
     token: string,
     channel: VerificationChannel,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -219,6 +255,12 @@ export class AccessService {
     code: string,
     token: string,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -241,13 +283,19 @@ export class AccessService {
     );
 
     session.setAccessLevel(AccessLevel.MEDIUM);
-    await this.generateAccessLevel(session);
+    await this.grantAccessLevel(session);
   }
 
   public async verifyRequestMediumAccessLevelByTOTP(
     session: SessionEntity,
     code: string,
   ) {
+    if (session.getAccessLevel() >= AccessLevel.MEDIUM)
+      throw new BadRequestException({
+        code: 'redundant_access_request',
+        message:
+          'The current session already holds access to the specified resource. No further access request is required.',
+      });
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -294,9 +342,12 @@ export class AccessService {
       });
     }
     if (attempts <= 0) await this.kv.del(cacheKey);
+
+    session.setAccessLevel(AccessLevel.MEDIUM);
+    await this.grantAccessLevel(session);
   }
 
-  public async generateAccessLevel(session: SessionEntity) {
+  public async grantAccessLevel(session: SessionEntity) {
     await this.kv.setex(
       `session:${session.getSecondaryPublicId()}`,
       AuthService.EXPIRATION.ACCESS_TOKEN -
