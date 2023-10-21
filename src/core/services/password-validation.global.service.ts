@@ -9,18 +9,18 @@ import ThrottlerService from '../security/throttler.service';
 import SessionEntity from '../../auth/entities/session.entity';
 import { PrismaService } from '../providers/prisma.service';
 import RedisService from '../providers/redis.service';
-import SessionService from './session.service';
+import SessionGlobalService from './session.global.service';
 import { AccountEntity } from '../../account/entities/account.entity';
 
 @Injectable()
-export default class PasswordValidationService {
+export default class PasswordValidationGlobalService {
   private static readonly ATTEMPTS_VALIDATE_PASSWORD_LIMIT = 15;
   private static readonly ATTEMPTS_VALIDATE_PASSWORD_TTL = 15 * 60; // 15min
   constructor(
     private readonly throttler: ThrottlerService,
     private readonly prisma: PrismaService,
     private readonly kv: RedisService,
-    private readonly sessionService: SessionService,
+    private readonly sessionService: SessionGlobalService,
   ) {}
 
   public async validatePasswordIfRateLimitedRevokeSession(
@@ -42,7 +42,7 @@ export default class PasswordValidationService {
     if (throttler) {
       if (
         throttler.attempts >=
-        PasswordValidationService.ATTEMPTS_VALIDATE_PASSWORD_LIMIT
+        PasswordValidationGlobalService.ATTEMPTS_VALIDATE_PASSWORD_LIMIT
       ) {
         await this.sessionService.revoke(
           session.getPrimaryPublicId(),
@@ -67,7 +67,7 @@ export default class PasswordValidationService {
     if (!isVerifiedPassword) {
       await this.kv.setex<ValidatePasswordThrottler>(
         cacheKey,
-        PasswordValidationService.ATTEMPTS_VALIDATE_PASSWORD_TTL,
+        PasswordValidationGlobalService.ATTEMPTS_VALIDATE_PASSWORD_TTL,
         {
           attempts: (throttler?.attempts ?? 0) + 1,
         },

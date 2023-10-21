@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export default class TotpService {
+export default class TotpGlobalService {
   //TOTP Configuration
   private static readonly ALGORITHM = 'sha1';
   private static readonly ISSUER = 'faisal.gg';
@@ -24,12 +24,14 @@ export default class TotpService {
 
   public generateCode(secret: string) {
     const counter = Math.floor(
-      Math.floor(Date.now() / 1000) / TotpService.PERIOD,
+      Math.floor(Date.now() / 1000) / TotpGlobalService.PERIOD,
     );
 
     const counterBuffer = Buffer.alloc(8);
     counterBuffer.writeBigInt64BE(
-      BigInt(Math.floor(Math.floor(Date.now() / 1000) / TotpService.PERIOD)),
+      BigInt(
+        Math.floor(Math.floor(Date.now() / 1000) / TotpGlobalService.PERIOD),
+      ),
       0,
     );
 
@@ -38,21 +40,22 @@ export default class TotpService {
       .digest();
     const offset = buffer[buffer.length - 1] & 0x0f;
     const otp =
-      (buffer.readUInt32BE(offset) & 0x7fffffff) % 10 ** TotpService.DIGITS;
+      (buffer.readUInt32BE(offset) & 0x7fffffff) %
+      10 ** TotpGlobalService.DIGITS;
 
-    return otp.toString().padStart(TotpService.DIGITS, '0');
+    return otp.toString().padStart(TotpGlobalService.DIGITS, '0');
   }
 
   public createUri(secret: string, displayName: string) {
     const params = new URLSearchParams({
       secret,
-      issuer: TotpService.ISSUER,
-      period: String(TotpService.PERIOD),
-      digits: String(TotpService.DIGITS),
-      algorithm: TotpService.ALGORITHM,
+      issuer: TotpGlobalService.ISSUER,
+      period: String(TotpGlobalService.PERIOD),
+      digits: String(TotpGlobalService.DIGITS),
+      algorithm: TotpGlobalService.ALGORITHM,
     });
     return `otpauth://totp/${
-      TotpService.ISSUER
+      TotpGlobalService.ISSUER
     }:${displayName}?${params.toString()}`;
   }
 }

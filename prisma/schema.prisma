@@ -51,26 +51,33 @@ model AccountSession {
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
-  tokens   AccountSessionTokens[]
-  activity AccountActivity[]
+  tokens AccountSessionTokens[]
 
   @@index([accountId])
 }
 
 model AccountSessionTokens {
-  id        BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
-  publicId  String   @unique @db.VarChar(16)
-  sessionId BigInt   @db.UnsignedBigInt
-  visitorId BigInt   @unique @db.UnsignedBigInt
-  token     String   @unique @db.VarChar(100)
-  ref       String?  @unique @db.VarChar(100)
-  expires   DateTime @db.Timestamp(0)
-  createdAt DateTime @default(now()) @db.Timestamp(0)
+  id          BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  publicId    String             @unique @db.VarChar(16)
+  sessionId   BigInt             @db.UnsignedBigInt
+  visitorId   BigInt             @unique @db.UnsignedBigInt
+  token       String             @unique @db.VarChar(100)
+  ref         String?            @unique @db.VarChar(100)
+  expires     DateTime           @db.Timestamp(0)
+  accessLevel SessionAccessLevel
+  updatedAt   DateTime           @updatedAt @db.Timestamp(0)
+  createdAt   DateTime           @default(now()) @db.Timestamp(0)
 
-  session AccountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  visitor Visitor        @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  session  AccountSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitor  Visitor           @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  activity AccountActivity[]
 
   @@index([sessionId])
+}
+
+enum SessionAccessLevel {
+  NONE
+  MEDIUM
 }
 
 model AccountFederatedIdentities {
@@ -101,17 +108,74 @@ model Visitor {
 }
 
 model AccountActivity {
-  id        BigInt         @id @default(autoincrement()) @db.UnsignedBigInt
-  sessionId BigInt         @db.UnsignedBigInt
-  visitorId BigInt         @db.UnsignedBigInt
-  publicId  String         @unique @db.VarChar(16)
-  event     String         @db.VarChar(100)
-  createdAt DateTime       @default(now()) @db.Timestamp(0)
-  session   AccountSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  visitor   Visitor        @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  id             BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
+  sessionTokenId BigInt                @db.UnsignedBigInt
+  visitorId      BigInt                @db.UnsignedBigInt
+  publicId       String                @unique @db.VarChar(16)
+  operationType  ActivityOperationType
+  action         ActivityAction
+  createdAt      DateTime              @default(now()) @db.Timestamp(0)
+  data           AccountActivityData[]
+  sessionToken   AccountSessionTokens  @relation(fields: [sessionTokenId], references: [id], onDelete: Cascade)
+  visitor        Visitor               @relation(fields: [visitorId], references: [id], onDelete: Cascade)
 
-  @@index([sessionId])
+  @@index([sessionTokenId])
   @@index([visitorId])
+}
+
+model AccountActivityData {
+  id         BigInt          @id @default(autoincrement()) @db.UnsignedBigInt
+  activityId BigInt          @db.UnsignedBigInt
+  key        String          @db.VarChar(100)
+  value      String          @db.VarChar(500)
+  activity   AccountActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+}
+
+enum ActivityOperationType {
+  NOTIFY
+  UPDATE
+  CREATE
+  DELETE
+}
+
+enum ActivityAction {
+  NEW_AUTHENTICATION
+  PASSWORD_RECOVERED
+  PASSWORD_UPDATED
+  PASSWORD_ADDED
+  EMAIL_UPDATED
+  PHONE_UPDATED
+  PHONE_ADDED
+  PHONE_DELETE
+  SESSION_REVOKED
+  ALL_SESSIONS_REVOKED
+  PHOTO_UPDATED
+  PHOTO_ADDED
+  ACCOUNT_DATA_UPDATED
+  ACCOUNT_PASSWORD_LOCKED
+  ACCOUNT_MFA_LOCKED
+  // Multi-factor
+  MFA_SMS_ADDED
+  MFA_EMAIL_ADDED
+  MFA_APP_ADDED
+  MFA_WHATSAPP_ADDED
+  MFA_SMS_REMOVED
+  MFA_EMAIL_REMOVED
+  MFA_APP_REMOVED
+  MFA_WHATSAPP_REMOVED
+  // Provider
+  GOOGLE_PROVIDER_CONNECTED
+  GITHUB_PROVIDER_CONNECTED
+  FACEBOOK_PROVIDER_CONNECTED
+  TWITTER_PROVIDER_CONNECTED
+  MICROSOFT_PROVIDER_CONNECTED
+  GOOGLE_PROVIDER_DISCONNECTED
+  GITHUB_PROVIDER_DISCONNECTED
+  FACEBOOK_PROVIDER_DISCONNECTED
+  TWITTER_PROVIDER_DISCONNECTED
+  MICROSOFT_PROVIDER_DISCONNECTED
 }
 
 enum Provider {

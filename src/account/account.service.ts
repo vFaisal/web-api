@@ -22,15 +22,15 @@ import TwilioService, {
   VerificationChannel,
 } from '../core/providers/twilio.service';
 import RedisService from '../core/providers/redis.service';
-import PhoneVerificationService from '../core/services/phone-verification.service';
-import EmailVerificationService from '../core/services/email-verification.service';
+import PhoneVerificationGlobalService from '../core/services/phone-verification.global.service';
+import EmailVerificationGlobalService from '../core/services/email-verification.global.service';
 import { Prisma } from '@prisma/client';
 import UpdatePasswordDto from './dto/update-password.dto';
 import { argon2id, hash, verify } from 'argon2';
 import ThrottlerService from '../core/security/throttler.service';
 import UpdateAccountDto from './dto/update-account.dto';
 import OpenaiService from '../core/providers/openai.service';
-import PasswordValidationService from '../core/services/password-validation.service';
+import PasswordValidationGlobalService from '../core/services/password-validation.global.service';
 
 @Injectable()
 export class AccountService {
@@ -49,11 +49,11 @@ export class AccountService {
     private readonly r2: R2Service,
     private readonly kv: RedisService,
     private readonly twilioService: TwilioService,
-    private readonly phoneVerificationService: PhoneVerificationService,
-    private readonly emailVerificationService: EmailVerificationService,
+    private readonly phoneVerificationService: PhoneVerificationGlobalService,
+    private readonly emailVerificationService: EmailVerificationGlobalService,
     private readonly throttler: ThrottlerService,
     private readonly openai: OpenaiService,
-    private readonly passwordValidation: PasswordValidationService,
+    private readonly passwordValidation: PasswordValidationGlobalService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {

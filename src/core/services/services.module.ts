@@ -1,25 +1,28 @@
 import { Global, Module } from '@nestjs/common';
-import PhoneVerificationService from './phone-verification.service';
-import EmailVerificationService from './email-verification.service';
-import TotpService from './totp.service';
-import PasswordValidationService from './password-validation.service';
-import SessionService from './session.service';
+import PhoneVerificationGlobalService from './phone-verification.global.service';
+import EmailVerificationGlobalService from './email-verification.global.service';
+import TotpGlobalService from './totp.global.service';
+import PasswordValidationGlobalService from './password-validation.global.service';
+import SessionGlobalService from './session.global.service';
+import AccountActivityGlobalService from './account-activity.global.service';
 
 @Global()
 @Module({
   providers: [
-    PhoneVerificationService,
-    EmailVerificationService,
-    TotpService,
-    PasswordValidationService,
-    SessionService,
+    PhoneVerificationGlobalService,
+    EmailVerificationGlobalService,
+    TotpGlobalService,
+    PasswordValidationGlobalService,
+    SessionGlobalService,
+    AccountActivityGlobalService,
   ],
   exports: [
-    PhoneVerificationService,
-    EmailVerificationService,
-    TotpService,
-    PasswordValidationService,
-    SessionService,
+    PhoneVerificationGlobalService,
+    EmailVerificationGlobalService,
+    TotpGlobalService,
+    PasswordValidationGlobalService,
+    SessionGlobalService,
+    AccountActivityGlobalService,
   ],
 })
 export default class ServicesModule {}

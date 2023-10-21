@@ -1,7 +1,7 @@
 import { Matches } from 'class-validator';
-import TotpService from '../../../core/services/totp.service';
+import TotpGlobalService from '../../../core/services/totp.global.service';
 
 export default class VerifyTotpEntity {
-  @Matches(new RegExp('^\\d{' + TotpService.DIGITS + '}$'))
+  @Matches(new RegExp('^\\d{' + TotpGlobalService.DIGITS + '}$'))
   digit: string;
 }

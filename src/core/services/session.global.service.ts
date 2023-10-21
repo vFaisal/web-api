@@ -9,8 +9,8 @@ import RedisService from '../providers/redis.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
-export default class SessionService {
-  private readonly logger: Logger = new Logger('SessionService');
+export default class SessionGlobalService {
+  private readonly logger: Logger = new Logger('SessionGlobalService');
   constructor(
     private readonly prisma: PrismaService,
     private readonly kv: RedisService,

@@ -15,14 +15,16 @@ import ThrottlerService from '../security/throttler.service';
 import Constants from '../utils/constants';
 
 @Injectable()
-export default class PhoneVerificationService {
+export default class PhoneVerificationGlobalService {
   constructor(
     private readonly kv: RedisService,
     private readonly twilioService: TwilioService,
     private readonly throttler: ThrottlerService,
   ) {}
 
-  private readonly logger: Logger = new Logger('PhoneVerificationService');
+  private readonly logger: Logger = new Logger(
+    'PhoneVerificationGlobalService',
+  );
 
   public static readonly VERIFICATION_EXPIRATION = 60 * 10;
   private static readonly RESEND_COOLDOWN = 30; //Seconds;
@@ -82,7 +84,7 @@ export default class PhoneVerificationService {
 
     await this.kv.setex<PhoneVerificationCache>(
       this.cacheKey(fullPhoneNumber),
-      PhoneVerificationService.VERIFICATION_EXPIRATION,
+      PhoneVerificationGlobalService.VERIFICATION_EXPIRATION,
       {
         sid: verification.sid,
         intent,
@@ -99,7 +101,9 @@ export default class PhoneVerificationService {
         fullNumber: fullPhoneNumber,
       },
       token: token,
-      expires: unixTimestamp(PhoneVerificationService.VERIFICATION_EXPIRATION),
+      expires: unixTimestamp(
+        PhoneVerificationGlobalService.VERIFICATION_EXPIRATION,
+      ),
     };
   }
 
@@ -133,7 +137,7 @@ export default class PhoneVerificationService {
 
     if (
       lastAttemptTimestampDate >
-      Date.now() - PhoneVerificationService.RESEND_COOLDOWN * 1000
+      Date.now() - PhoneVerificationGlobalService.RESEND_COOLDOWN * 1000
     )
       throw new BadRequestException({
         code: 'resend_phone_verification_cooldown',
@@ -144,7 +148,7 @@ export default class PhoneVerificationService {
     await this.twilioService.createNewVerification(phoneNumber, channel);
 
     return {
-      nextResend: unixTimestamp(PhoneVerificationService.RESEND_COOLDOWN),
+      nextResend: unixTimestamp(PhoneVerificationGlobalService.RESEND_COOLDOWN),
     };
   }
 

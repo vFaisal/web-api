@@ -5,7 +5,7 @@ import {
   RegistrationCache,
   RegistrationService,
 } from '../registration.service';
-import EmailVerificationService from '../../core/services/email-verification.service';
+import EmailVerificationGlobalService from '../../core/services/email-verification.global.service';
 import VerifyEmailDto from './dto/verify-email.dto';
 import ResendEmailVerificationDto from './dto/resend-email-verification.dto';
 
@@ -13,7 +13,7 @@ import ResendEmailVerificationDto from './dto/resend-email-verification.dto';
 export class VerificationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly emailVerificationService: EmailVerificationService,
+    private readonly emailVerificationService: EmailVerificationGlobalService,
     private readonly kv: RedisService,
   ) {}
 

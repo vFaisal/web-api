@@ -23,6 +23,7 @@ import ThrottlerService from '../core/security/throttler.service';
 import Constants from '../core/utils/constants';
 import SendgridService from '../core/providers/sendgrid.service';
 import { AccessLevel } from '../core/security/authorization.decorator';
+import ResendService from '../core/providers/resend.service';
 
 @Injectable()
 export class AuthService {
@@ -45,7 +46,7 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly kv: RedisService,
     private readonly throttler: ThrottlerService,
-    private readonly sendgrid: SendgridService,
+    private readonly resend: ResendService,
   ) {}
 
   public async authenticate(
@@ -448,9 +449,8 @@ export class AuthService {
       '\n' +
       "If this request wasn't made by you, kindly disregard this email.";
 
-    await this.sendgrid.sendEmail(account.email, 'Password Reset Request', {
-      type: 'text/plain',
-      value: mail,
+    await this.resend.sendEmail(account.email, 'Password Recovery Request', {
+      text: mail,
     });
   }
 

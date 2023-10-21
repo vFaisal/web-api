@@ -11,9 +11,7 @@ import {
   unixTimestamp,
 } from '../../core/utils/util';
 import { PrismaService } from '../../core/providers/prisma.service';
-import PhoneVerificationService from '../../core/services/phone-verification.service';
-import TwilioService from '../../core/providers/twilio.service';
-import TotpService from '../../core/services/totp.service';
+import TotpGlobalService from '../../core/services/totp.global.service';
 
 @Injectable()
 export class MultiFactorService {
@@ -24,7 +22,7 @@ export class MultiFactorService {
     private readonly accountService: AccountService,
     private readonly kv: RedisService,
     private readonly prisma: PrismaService,
-    private readonly totpService: TotpService,
+    private readonly totpService: TotpGlobalService,
   ) {}
 
   public async enableEmail(session: SessionEntity) {

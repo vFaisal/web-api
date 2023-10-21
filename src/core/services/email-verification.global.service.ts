@@ -12,20 +12,24 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import ResendService from '../providers/resend.service';
 
 @Injectable()
-export default class EmailVerificationService {
+export default class EmailVerificationGlobalService {
   public static readonly DEFAULT_ATTEMPTS: number = 5;
   public static readonly DEFAULT_RESEND: number = 2;
   public static readonly VERIFICATION_EXPIRATION = 60 * 10;
 
   public static readonly RESEND_COOLDOWN = 30; // 30 seconds
 
-  private readonly logger: Logger = new Logger('EmailVerificationService');
+  private readonly logger: Logger = new Logger(
+    'EmailVerificationGlobalService',
+  );
 
   constructor(
     private readonly kv: RedisService,
     private readonly sendgrid: SendgridService,
+    private readonly resendService: ResendService,
     private readonly throttler: ThrottlerService,
     private readonly config: ConfigService,
   ) {}
@@ -102,7 +106,7 @@ export default class EmailVerificationService {
 
     await this.kv.setex<EmailVerificationCache>(
       'emailVerification:' + email,
-      EmailVerificationService.VERIFICATION_EXPIRATION,
+      EmailVerificationGlobalService.VERIFICATION_EXPIRATION,
       {
         email: email,
         intent,
@@ -116,9 +120,8 @@ export default class EmailVerificationService {
     );
 
     if (this.config.get('NODE_ENV') == 'production') {
-      await this.sendgrid.sendEmail(email, message.subject, {
-        type: 'text/plain',
-        value: message.description.replace('######', String(randomDigit)),
+      await this.resendService.sendEmail(email, message.subject, {
+        text: message.description.replace('######', String(randomDigit)),
       });
     } else
       this.logger.debug(`[Email: ${email}] Verification code: `, randomDigit);
@@ -143,7 +146,7 @@ export default class EmailVerificationService {
 
     const cache = await this.retrieveCache(token, email, intent, accountId);
 
-    if (cache.resend >= EmailVerificationService.DEFAULT_RESEND)
+    if (cache.resend >= EmailVerificationGlobalService.DEFAULT_RESEND)
       throw new HttpException(
         {
           code: 'resend_email_verification_limit_reached',
@@ -156,7 +159,7 @@ export default class EmailVerificationService {
     if (
       cache.lastResendTimestamp &&
       cache.lastResendTimestamp >
-        Date.now() - EmailVerificationService.RESEND_COOLDOWN * 1000
+        Date.now() - EmailVerificationGlobalService.RESEND_COOLDOWN * 1000
     )
       throw new BadRequestException({
         code: 'resend_email_verification_cooldown',
@@ -166,7 +169,7 @@ export default class EmailVerificationService {
 
     await this.kv.setex<EmailVerificationCache>(
       'emailVerification:' + email,
-      EmailVerificationService.VERIFICATION_EXPIRATION,
+      EmailVerificationGlobalService.VERIFICATION_EXPIRATION,
       {
         email: cache.email,
         intent: cache.intent,
@@ -180,15 +183,14 @@ export default class EmailVerificationService {
     );
 
     if (this.config.get('NODE_ENV') == 'production') {
-      await this.sendgrid.sendEmail(email, message.subject, {
-        type: 'text/plain',
-        value: message.description.replace('######', cache.code),
+      await this.resendService.sendEmail(email, message.subject, {
+        text: message.description.replace('######', cache.code),
       });
     } else
       this.logger.debug(`[Email: ${email}] Verification code: `, cache.code);
 
     return {
-      nextResend: unixTimestamp(EmailVerificationService.RESEND_COOLDOWN),
+      nextResend: unixTimestamp(EmailVerificationGlobalService.RESEND_COOLDOWN),
     };
   }
 
@@ -201,7 +203,7 @@ export default class EmailVerificationService {
   ) {
     const cache = await this.retrieveCache(token, email, intent, accountId);
 
-    if (cache.attempts >= EmailVerificationService.DEFAULT_ATTEMPTS) {
+    if (cache.attempts >= EmailVerificationGlobalService.DEFAULT_ATTEMPTS) {
       await this.kv.del('emailVerification:' + email);
       throw new HttpException(
         {
@@ -216,7 +218,7 @@ export default class EmailVerificationService {
     if (cache.code !== code) {
       await this.kv.setex<EmailVerificationCache>(
         'emailVerification:' + email,
-        EmailVerificationService.VERIFICATION_EXPIRATION,
+        EmailVerificationGlobalService.VERIFICATION_EXPIRATION,
         {
           email: cache.email,
           intent: cache.intent,

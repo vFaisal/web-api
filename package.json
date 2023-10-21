@@ -41,6 +41,7 @@
     "nanoid": "^3.3.6",
     "npm-check-updates": "^16.13.2",
     "reflect-metadata": "^0.1.13",
+    "resend": "^1.0.0",
     "rxjs": "^7.8.1",
     "ua-parser-js": "^1.0.35"
   },

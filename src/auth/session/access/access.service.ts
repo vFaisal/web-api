@@ -4,11 +4,11 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../core/providers/prisma.service';
-import PasswordValidationService from '../../../core/services/password-validation.service';
-import EmailVerificationService from '../../../core/services/email-verification.service';
-import PhoneVerificationService from '../../../core/services/phone-verification.service';
-import TotpService from '../../../core/services/totp.service';
-import SessionService from '../../../core/services/session.service';
+import PasswordValidationGlobalService from '../../../core/services/password-validation.global.service';
+import EmailVerificationGlobalService from '../../../core/services/email-verification.global.service';
+import PhoneVerificationGlobalService from '../../../core/services/phone-verification.global.service';
+import TotpGlobalService from '../../../core/services/totp.global.service';
+import SessionGlobalService from '../../../core/services/session.global.service';
 import RedisService from '../../../core/providers/redis.service';
 import SessionEntity from '../../entities/session.entity';
 import { AccountEntity } from '../../../account/entities/account.entity';
@@ -27,11 +27,11 @@ export class AccessService {
   private static readonly ATTEMPTS_VALIDATE_TOTP_TTL = 15 * 60;
   constructor(
     private readonly prisma: PrismaService,
-    private readonly passwordValidation: PasswordValidationService,
-    private readonly emailVerificationService: EmailVerificationService,
-    private readonly phoneVerificationService: PhoneVerificationService,
-    private readonly totpService: TotpService,
-    private readonly sessionService: SessionService,
+    private readonly passwordValidation: PasswordValidationGlobalService,
+    private readonly emailVerificationService: EmailVerificationGlobalService,
+    private readonly phoneVerificationService: PhoneVerificationGlobalService,
+    private readonly totpService: TotpGlobalService,
+    private readonly sessionService: SessionGlobalService,
     private readonly kv: RedisService,
   ) {}
 
@@ -125,7 +125,9 @@ export class AccessService {
 
     return {
       token: verificationToken,
-      expires: unixTimestamp(EmailVerificationService.VERIFICATION_EXPIRATION),
+      expires: unixTimestamp(
+        EmailVerificationGlobalService.VERIFICATION_EXPIRATION,
+      ),
     };
   }
 

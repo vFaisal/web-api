@@ -14,15 +14,15 @@ import {
 import { PrismaService } from '../../core/providers/prisma.service';
 import RedisService from '../../core/providers/redis.service';
 import { AuthService } from '../auth.service';
-import PhoneVerificationService from '../../core/services/phone-verification.service';
+import PhoneVerificationGlobalService from '../../core/services/phone-verification.global.service';
 import { VerificationChannel } from '../../core/providers/twilio.service';
 import { Account, SessionType } from '@prisma/client';
 import MultiFactorLoginStartVerificationDto, {
   AuthenticateMFAMethods,
 } from './dto/multi-factor-login-start-verification.dto';
-import EmailVerificationService from '../../core/services/email-verification.service';
+import EmailVerificationGlobalService from '../../core/services/email-verification.global.service';
 import { UAParser } from 'ua-parser-js';
-import TotpService from '../../core/services/totp.service';
+import TotpGlobalService from '../../core/services/totp.global.service';
 import ThrottlerService from '../../core/security/throttler.service';
 
 @Injectable()
@@ -35,10 +35,10 @@ export class MultiFactorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly kv: RedisService,
-    private readonly phoneVerificationService: PhoneVerificationService,
-    private readonly emailVerificationService: EmailVerificationService,
+    private readonly phoneVerificationService: PhoneVerificationGlobalService,
+    private readonly emailVerificationService: EmailVerificationGlobalService,
     private readonly authService: AuthService,
-    private readonly totpService: TotpService,
+    private readonly totpService: TotpGlobalService,
     private readonly throttler: ThrottlerService,
   ) {}
 
