@@ -13,7 +13,12 @@ import {
   SignificantRequestInformation,
   unixTimestamp,
 } from '../core/utils/util';
-import { Account, SessionType } from '@prisma/client';
+import {
+  Account,
+  ActivityAction,
+  ActivityOperationType,
+  SessionType,
+} from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 import SessionEntity from './entities/session.entity';
 import RedisService from '../core/providers/redis.service';
@@ -21,9 +26,9 @@ import { AccountEntity } from '../account/entities/account.entity';
 import { MultiFactorLogin } from './multi-factor/multi-factor.service';
 import ThrottlerService from '../core/security/throttler.service';
 import Constants from '../core/utils/constants';
-import SendgridService from '../core/providers/sendgrid.service';
 import { AccessLevel } from '../core/security/authorization.decorator';
 import ResendService from '../core/providers/resend.service';
+import AccountActivityGlobalService from '../core/services/account-activity.global.service';
 
 @Injectable()
 export class AuthService {
@@ -47,12 +52,13 @@ export class AuthService {
     private readonly kv: RedisService,
     private readonly throttler: ThrottlerService,
     private readonly resend: ResendService,
+    private readonly accountActivity: AccountActivityGlobalService,
   ) {}
 
   public async authenticate(
     email: string,
     password: string,
-    significantRequestInformation: SignificantRequestInformation,
+    sri: SignificantRequestInformation,
   ) {
     const account = await this.prisma.account.findUnique({
       where: {
@@ -106,6 +112,18 @@ export class AuthService {
             passwordLoginUnlocked: unlockedTime,
           },
         });
+        this.accountActivity.create(
+          account.id,
+          sri,
+          ActivityOperationType.NOTIFY,
+          ActivityAction.ACCOUNT_PASSWORD_LOCKED,
+          [
+            {
+              key: "passwordUnlockTimestamp",
+              value: String(unlockedTime.getTime())
+            }
+          ]
+        );
       }
       await this.kv.setex(
         cacheKey,
@@ -119,11 +137,7 @@ export class AuthService {
       });
     }
 
-    return this.createCredentials(
-      account,
-      significantRequestInformation,
-      SessionType.EMAIL,
-    );
+    return this.createCredentials(account, sri, SessionType.EMAIL);
   }
 
   private async createJWT(accountPublicId: string) {
@@ -147,28 +161,31 @@ export class AuthService {
     };
   }
 
-  private async addCredentialsToCache(
+  private async addCredentialsToSessionCache(
     jwtPayload: AppJWTPayload,
     primaryPublicId: string,
     accountId: bigint,
-  ) {
+    level: AccessLevel,
+  ): Promise<SessionEntity> {
     //Cache the access token for revocation (We add await if we want to use cache service like redis);
+    const session = new SessionEntity({
+      ppi: primaryPublicId,
+      spi: jwtPayload.spi,
+      tkn: jwtPayload.tkn,
+      act: {
+        id: accountId,
+        pid: jwtPayload.sub,
+      },
+      cta: unixTimestamp(),
+      lvl: level,
+    });
     await this.kv.setex(
       `session:${jwtPayload.spi}`,
       AuthService.EXPIRATION
         .ACCESS_TOKEN /* 1 hour same the access token expiration */,
-      new SessionEntity({
-        ppi: primaryPublicId,
-        spi: jwtPayload.spi,
-        tkn: jwtPayload.tkn,
-        act: {
-          id: accountId,
-          pid: jwtPayload.sub,
-        },
-        cta: unixTimestamp(),
-        lvl: AccessLevel.NONE,
-      }),
+      session,
     );
+    return session;
   }
 
   public async createCredentials(
@@ -217,6 +234,7 @@ export class AuthService {
         expires: unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
       };
     }
+
     const jwt = await this.createJWT(account.publicId);
 
     const primarySessionId = generateNanoId();
@@ -234,6 +252,7 @@ export class AuthService {
               AuthService.EXPIRATION.REFRESH_TOKEN,
               'DATE',
             ),
+            accessLevel: 'MEDIUM',
             visitor: {
               create: {
                 publicId: generateNanoId(),
@@ -253,10 +272,18 @@ export class AuthService {
       },
     });
 
-    await this.addCredentialsToCache(
+    const sessionCache = await this.addCredentialsToSessionCache(
       jwt.payload,
       primarySessionId,
       session.accountId,
+      AccessLevel.MEDIUM,
+    );
+
+    this.accountActivity.create(
+      sessionCache,
+      significantRequestInformation,
+      ActivityOperationType.NOTIFY,
+      ActivityAction.NEW_AUTHENTICATION,
     );
 
     return {
@@ -341,6 +368,7 @@ export class AuthService {
     });
     const session = await this.prisma.accountSessionTokens.create({
       data: {
+        accessLevel: 'NONE',
         publicId: jwt.payload.spi,
         sessionId: tokenSession.session.id,
         token: jwt.payload.tkn,
@@ -350,20 +378,32 @@ export class AuthService {
       },
     });
 
-    await this.addCredentialsToCache(
+    const sessionCache = await this.addCredentialsToSessionCache(
       jwt.payload,
       tokenSession.session.publicId,
       tokenSession.session.account.id,
+      AccessLevel.NONE,
+    );
+
+    this.accountActivity.create(
+      sessionCache,
+      significantRequestInformation,
+      ActivityOperationType.NOTIFY,
+      ActivityAction.REFRESH_AUTHENTICATION,
     );
 
     return {
       accessToken: jwt.accessToken,
+      expiresIn: unixTimestamp(AuthService.EXPIRATION.ACCESS_TOKEN),
       refreshToken: jwt.refreshToken,
     };
   }
 
-  public async revokeToken(session: SessionEntity) {
-    await this.prisma.accountSessionTokens
+  public async selfRevokeSession(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
+    const sessionToken = await this.prisma.accountSessionTokens
       .update({
         where: {
           token: session.getToken(),
@@ -376,7 +416,7 @@ export class AuthService {
           },
         },
         select: {
-          id: true,
+          sessionId: true,
         },
       })
       .catch(async (err) => {
@@ -396,6 +436,18 @@ export class AuthService {
       });
 
     await this.kv.del(`session:${session.getSecondaryPublicId()}`);
+    this.accountActivity.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.SELF_SESSION_REVOKED,
+      [
+        {
+          key: 'sessionId',
+          value: String(sessionToken.sessionId),
+        },
+      ],
+    );
   }
 
   public async startPasswordRecovery(
@@ -465,7 +517,11 @@ export class AuthService {
       });
   }
 
-  public async passwordRecovery(token: string, password: string) {
+  public async passwordRecovery(
+    sri: SignificantRequestInformation,
+    token: string,
+    password: string,
+  ) {
     const recovery = await this.kv.get<PasswordRecoveryCache>(
       'passwordRecovery:' + token,
     );
@@ -489,8 +545,6 @@ export class AuthService {
 
     await this.kv.del('passwordRecovery:' + token);
 
-    //Add Account Activity Log (Name: Recovery Password)
-
     await this.prisma.account.updateMany({
       where: {
         email: recovery.email,
@@ -510,6 +564,19 @@ export class AuthService {
             : undefined,
       },
     });
+
+    this.accountActivity.create(
+      null,
+      sri,
+      ActivityOperationType.UPDATE,
+      ActivityAction.PASSWORD_RECOVERED,
+      [
+        {
+          key: 'oldPasswordHash',
+          value: account.passwordHash,
+        },
+      ],
+    );
   }
 }
 

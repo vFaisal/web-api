@@ -18,6 +18,7 @@ import {
   AccessLevel,
   Authorization,
 } from '../../core/security/authorization.decorator';
+import { significantRequestInformation } from "../../core/utils/util";
 
 @Controller({
   path: 'account/sessions',
@@ -42,7 +43,7 @@ export class SessionsController {
     @Param('id', new ParseNanoidPipe(16)) sessionId: string,
   ) {
     const session: SessionEntity = (request as any).session;
-    return this.sessionService.delete(session, sessionId);
+    return this.sessionService.delete(session, significantRequestInformation(request), sessionId);
   }
 
   @Delete()
@@ -50,6 +51,6 @@ export class SessionsController {
   @HttpCode(HttpStatus.NO_CONTENT)
   deleteSessions(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.sessionService.deleteAll(session);
+    return this.sessionService.deleteAll(session, significantRequestInformation(request));
   }
 }

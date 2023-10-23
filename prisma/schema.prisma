@@ -31,6 +31,7 @@ model Account {
   createdAt             DateTime  @default(now()) @db.Timestamp(0)
 
   sessions            AccountSession[]
+  activity            AccountActivity[]
   federatedIdentities AccountFederatedIdentities[]
 
   @@unique([phoneCountryCode, phoneNumber])
@@ -109,18 +110,21 @@ model Visitor {
 
 model AccountActivity {
   id             BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
-  sessionTokenId BigInt                @db.UnsignedBigInt
+  accountId BigInt @db.UnsignedBigInt
+  sessionTokenId BigInt?                @db.UnsignedBigInt
   visitorId      BigInt                @db.UnsignedBigInt
   publicId       String                @unique @db.VarChar(16)
   operationType  ActivityOperationType
   action         ActivityAction
   createdAt      DateTime              @default(now()) @db.Timestamp(0)
   data           AccountActivityData[]
-  sessionToken   AccountSessionTokens  @relation(fields: [sessionTokenId], references: [id], onDelete: Cascade)
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  sessionToken   AccountSessionTokens?  @relation(fields: [sessionTokenId], references: [id], onDelete: Cascade)
   visitor        Visitor               @relation(fields: [visitorId], references: [id], onDelete: Cascade)
 
   @@index([sessionTokenId])
   @@index([visitorId])
+  @@index([accountId])
 }
 
 model AccountActivityData {
@@ -142,6 +146,7 @@ enum ActivityOperationType {
 
 enum ActivityAction {
   NEW_AUTHENTICATION
+  REFRESH_AUTHENTICATION
   PASSWORD_RECOVERED
   PASSWORD_UPDATED
   PASSWORD_ADDED
@@ -149,10 +154,12 @@ enum ActivityAction {
   PHONE_UPDATED
   PHONE_ADDED
   PHONE_DELETE
+  SELF_SESSION_REVOKED
   SESSION_REVOKED
   ALL_SESSIONS_REVOKED
   PHOTO_UPDATED
   PHOTO_ADDED
+  PHOTO_DELETED
   ACCOUNT_DATA_UPDATED
   ACCOUNT_PASSWORD_LOCKED
   ACCOUNT_MFA_LOCKED

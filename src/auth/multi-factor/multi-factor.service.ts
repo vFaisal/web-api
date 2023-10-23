@@ -16,7 +16,12 @@ import RedisService from '../../core/providers/redis.service';
 import { AuthService } from '../auth.service';
 import PhoneVerificationGlobalService from '../../core/services/phone-verification.global.service';
 import { VerificationChannel } from '../../core/providers/twilio.service';
-import { Account, SessionType } from '@prisma/client';
+import {
+  Account,
+  ActivityAction,
+  ActivityOperationType,
+  SessionType,
+} from '@prisma/client';
 import MultiFactorLoginStartVerificationDto, {
   AuthenticateMFAMethods,
 } from './dto/multi-factor-login-start-verification.dto';
@@ -24,6 +29,7 @@ import EmailVerificationGlobalService from '../../core/services/email-verificati
 import { UAParser } from 'ua-parser-js';
 import TotpGlobalService from '../../core/services/totp.global.service';
 import ThrottlerService from '../../core/security/throttler.service';
+import AccountActivityGlobalService from '../../core/services/account-activity.global.service';
 
 @Injectable()
 export class MultiFactorService {
@@ -39,6 +45,7 @@ export class MultiFactorService {
     private readonly emailVerificationService: EmailVerificationGlobalService,
     private readonly authService: AuthService,
     private readonly totpService: TotpGlobalService,
+    private readonly accountActivityService: AccountActivityGlobalService,
     private readonly throttler: ThrottlerService,
   ) {}
 
@@ -93,7 +100,7 @@ export class MultiFactorService {
 
   public async startVerification(
     token: string,
-    significantRequestInformation: SignificantRequestInformation,
+    sri: SignificantRequestInformation,
     data: MultiFactorLoginStartVerificationDto,
   ) {
     const multiFactorLogin = await this.kv.get<MultiFactorLogin>(
@@ -134,7 +141,7 @@ export class MultiFactorService {
         });
 
       if (data.phoneNumber !== safeAccountData.phone.full) {
-        await this.handleThrottler(account, 2);
+        await this.handleThrottler(account,sri, 2);
         throw new BadRequestException({
           code: 'mfa_phone_number_not_matches',
           message:
@@ -191,7 +198,7 @@ export class MultiFactorService {
         'mfa_login',
         this.getEmailVerificationMessage(
           safeAccountData,
-          significantRequestInformation,
+          sri,
         ),
       );
 
@@ -297,7 +304,7 @@ export class MultiFactorService {
   public async verifyTOTP(
     token: string,
     code: string,
-    significantRequestInformation: SignificantRequestInformation,
+    sri: SignificantRequestInformation,
   ) {
     const multiFactorLogin = await this.kv.get<MultiFactorLogin>(
       `MFALogin:${token}`,
@@ -358,7 +365,7 @@ export class MultiFactorService {
     );
 
     if (generatedCode !== code) {
-      await this.handleThrottler(account, 1);
+      await this.handleThrottler(account,sri, 1);
       throw new BadRequestException({
         code: 'invalid_totp_code',
         message:
@@ -371,7 +378,7 @@ export class MultiFactorService {
     return this.createCredentials(
       account,
       token,
-      significantRequestInformation,
+      sri,
       multiFactorLogin.sessionType,
     );
   }
@@ -379,7 +386,7 @@ export class MultiFactorService {
   public async verify(
     token: string,
     code: string,
-    significantRequestInformation: SignificantRequestInformation,
+    sri: SignificantRequestInformation,
   ) {
     const multiFactorVerification = await this.kv.get<MultiFactorVerification>(
       `MFALoginVerification:${token}`,
@@ -436,7 +443,7 @@ export class MultiFactorService {
             (err.getResponse() as any)?.code ===
               'invalid_phone_verification_code'
           )
-            await this.handleThrottler(account, 2);
+            await this.handleThrottler(account,sri, 2);
           throw err;
         });
 
@@ -445,7 +452,7 @@ export class MultiFactorService {
       return this.createCredentials(
         account,
         multiFactorVerification.ref,
-        significantRequestInformation,
+        sri,
         multiFactorVerification.sessionType,
       );
     } else if (multiFactorVerification.method === 'email') {
@@ -463,7 +470,7 @@ export class MultiFactorService {
             (err.getResponse() as any)?.code ===
               'invalid_email_verification_code'
           )
-            await this.handleThrottler(account, 2);
+            await this.handleThrottler(account,sri, 2);
           throw err;
         });
 
@@ -472,7 +479,7 @@ export class MultiFactorService {
       return this.createCredentials(
         account,
         multiFactorVerification.ref,
-        significantRequestInformation,
+        sri,
         multiFactorVerification.sessionType,
       );
     }
@@ -484,7 +491,11 @@ export class MultiFactorService {
     });
   }
 
-  public async handleThrottler(account: Account, increment = 1) {
+  public async handleThrottler(
+    account: Account,
+    sri: SignificantRequestInformation,
+    increment = 1,
+  ) {
     const cacheKey = 'failedMultiFactorLoginAttempts:' + account.id;
     const failedAttempts = await this.kv.get<number>(cacheKey);
     if (failedAttempts >= MultiFactorService.FAILED_ATTEMPTS_LIMIT) {
@@ -504,6 +515,19 @@ export class MultiFactorService {
           mfaLoginUnlocked: unlockedTime,
         },
       });
+
+      this.accountActivityService.create(
+        account.id,
+        sri,
+        ActivityOperationType.NOTIFY,
+        ActivityAction.ACCOUNT_MFA_LOCKED,
+        [
+          {
+            key: "mfaUnlockTimestamp",
+            value: String(unlockedTime.getTime())
+          }
+        ]
+      );
     }
     await this.kv.setex(
       cacheKey,

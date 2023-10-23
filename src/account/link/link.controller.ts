@@ -6,15 +6,11 @@ import {
   HttpStatus,
   InternalServerErrorException,
   Logger,
-  Param,
-  ParseEnumPipe,
   Query,
   Req,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import { LinkService } from './link.service';
-import { AuthGuard } from '../../auth/auth.guard';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { CsrfProtection } from '../../core/security/csrf-protection.decorator';
 import FederatedIdentityQueryDto from '../../auth/federated-identities/dto/federated-identity-query.dto';
@@ -25,6 +21,7 @@ import {
   AccessLevel,
   Authorization,
 } from '../../core/security/authorization.decorator';
+import { significantRequestInformation } from '../../core/utils/util';
 
 @Controller({
   path: 'account/link',
@@ -58,7 +55,11 @@ export class LinkController {
   public unlink(@Req() req: FastifyRequest) {
     const provider = this.getProviderFromPath(req.routerPath);
     const session: SessionEntity = (req as any).session;
-    return this.linkService.unlink(session, provider);
+    return this.linkService.unlink(
+      session,
+      significantRequestInformation(req),
+      provider,
+    );
   }
 
   @Get([
@@ -78,6 +79,7 @@ export class LinkController {
     const session: SessionEntity = (req as any).session;
     return this.linkService.link(
       session,
+      significantRequestInformation(req),
       provider,
       query.state,
       query.code,
@@ -96,6 +98,7 @@ export class LinkController {
     const session: SessionEntity = (req as any).session;
     return this.linkService.link(
       session,
+      significantRequestInformation(req),
       Provider.GITHUB,
       query.state,
       query.code,

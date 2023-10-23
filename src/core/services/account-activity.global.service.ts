@@ -6,20 +6,39 @@ import {
 } from '@prisma/client';
 import { generateNanoId, SignificantRequestInformation } from '../utils/util';
 import SessionEntity from '../../auth/entities/session.entity';
+import { Injectable } from '@nestjs/common';
 
+@Injectable()
 export default class AccountActivityGlobalService {
   constructor(private readonly prisma: PrismaService) {}
 
   public async create(
-    session: SessionEntity,
+    sessionOrAccountId: SessionEntity | bigint,
     sri: SignificantRequestInformation,
     operationType: ActivityOperationType,
     action: ActivityAction,
     data?: { key: string; value: string }[],
   ) {
     const publicId = generateNanoId();
-    this.prisma.accountActivity.create({
+    const sessionToken =
+      sessionOrAccountId instanceof SessionEntity
+        ? {
+            sessionToken: {
+              connect: {
+                publicId: sessionOrAccountId.getSecondaryPublicId(),
+              },
+            },
+          }
+        : undefined;
+    const accountId: bigint =
+      sessionOrAccountId instanceof SessionEntity
+        ? sessionOrAccountId.getAccount().id
+        : sessionOrAccountId;
+
+
+    await this.prisma.accountActivity.create({
       data: {
+        ...sessionToken,
         publicId: publicId,
         operationType: operationType,
         action: action,
@@ -34,14 +53,14 @@ export default class AccountActivityGlobalService {
             counterCode: sri.countryCode,
           },
         },
-        session: {
+        account: {
           connect: {
-            publicId: session.getSecondaryPublicId(),
-          },
+            id: accountId
+          }
         },
         data: {
           createMany: {
-            data: data,
+            data: data ?? [],
           },
         },
       },

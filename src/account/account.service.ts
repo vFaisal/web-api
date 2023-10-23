@@ -24,13 +24,14 @@ import TwilioService, {
 import RedisService from '../core/providers/redis.service';
 import PhoneVerificationGlobalService from '../core/services/phone-verification.global.service';
 import EmailVerificationGlobalService from '../core/services/email-verification.global.service';
-import { Prisma } from '@prisma/client';
+import { ActivityAction, ActivityOperationType, Prisma } from '@prisma/client';
 import UpdatePasswordDto from './dto/update-password.dto';
 import { argon2id, hash, verify } from 'argon2';
 import ThrottlerService from '../core/security/throttler.service';
 import UpdateAccountDto from './dto/update-account.dto';
 import OpenaiService from '../core/providers/openai.service';
 import PasswordValidationGlobalService from '../core/services/password-validation.global.service';
+import AccountActivityGlobalService from '../core/services/account-activity.global.service';
 
 @Injectable()
 export class AccountService {
@@ -54,6 +55,7 @@ export class AccountService {
     private readonly throttler: ThrottlerService,
     private readonly openai: OpenaiService,
     private readonly passwordValidation: PasswordValidationGlobalService,
+    private readonly accountActivityService: AccountActivityGlobalService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {
@@ -68,7 +70,11 @@ export class AccountService {
     return new AccountEntity(account, account.federatedIdentities);
   }
 
-  public async uploadPhoto(file: MultipartFile, session: SessionEntity) {
+  public async uploadPhoto(
+    file: MultipartFile,
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     if (!R2Service.SUPPORTED_IMAGE_MIMETYPE.includes(file.mimetype))
       throw new UnsupportedMediaTypeException({
         code: 'unsupported_file_type',
@@ -109,12 +115,26 @@ export class AccountService {
       },
     });
 
+    this.accountActivityService.create(
+      session,
+      sri,
+      account.photoHash
+        ? ActivityOperationType.UPDATE
+        : ActivityOperationType.CREATE,
+      account.photoHash
+        ? ActivityAction.PHOTO_UPDATED
+        : ActivityAction.PHOTO_ADDED,
+    );
+
     return {
       url: R2Service.PUBLIC_CDN_DOMAIN + '/' + generatedImageId,
     };
   }
 
-  public async deletePhoto(session: SessionEntity) {
+  public async deletePhoto(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -123,20 +143,34 @@ export class AccountService {
         photoHash: true,
       },
     });
-    if (account.photoHash) {
-      await this.r2.delete(account.photoHash);
-      await this.prisma.account.updateMany({
-        data: {
-          photoHash: null,
-        },
-        where: {
-          id: session.getAccount().id,
-        },
+    if (!account.photoHash)
+      throw new BadRequestException({
+        code: 'account_photo_not_found',
+        message:
+          'Deletion of the account photo cannot be processed because there is no photo associated with the account.',
       });
-    }
+    await this.r2.delete(account.photoHash);
+    await this.prisma.account.updateMany({
+      data: {
+        photoHash: null,
+      },
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+
+    this.accountActivityService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.PHOTO_DELETED,
+    );
   }
 
-  public async deletePhone(session: SessionEntity) {
+  public async deletePhone(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -161,6 +195,23 @@ export class AccountService {
         mfaWhatsapp: null,
       },
     });
+
+    this.accountActivityService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.PHONE_DELETE,
+      [
+        {
+          key: 'oldPhoneNumber',
+          value: safeAccountData.phone.number,
+        },
+        {
+          key: 'oldPhoneCallingCode',
+          value: safeAccountData.phone.prefix.replace('+', ''),
+        },
+      ],
+    );
   }
 
   public async updatePhone(
@@ -192,7 +243,7 @@ export class AccountService {
       },
     });
     if (phoneNumberLinked)
-      throw new BadRequestException({
+      throw new ConflictException({
         code: 'phone_number_already_linked',
         message:
           'The phone number provided is already associated with another account.',
@@ -224,6 +275,7 @@ export class AccountService {
 
   public async verifyPhone(
     session: SessionEntity,
+    sri: SignificantRequestInformation,
     internationalPhoneNumber: string,
     token: string,
     code: string,
@@ -236,18 +288,58 @@ export class AccountService {
       'updatePhone',
     );
 
-    await this.prisma.account.updateMany({
-      data: {
-        phoneNumber: verification.cache.phone.number,
-        phoneCountryCode: verification.cache.phone.countryCallingCode,
-        phoneVerifiedAt: new Date(),
-        mfaSMS: null,
-        mfaWhatsapp: null,
-      },
+    const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
       },
     });
+    const safeAccountData = new AccountEntity(account);
+
+    await this.prisma.account
+      .updateMany({
+        data: {
+          phoneNumber: verification.cache.phone.number,
+          phoneCountryCode: verification.cache.phone.countryCallingCode,
+          phoneVerifiedAt: new Date(),
+          mfaSMS: null,
+          mfaWhatsapp: null,
+        },
+        where: {
+          id: session.getAccount().id,
+        },
+      })
+      .catch((err: Prisma.PrismaClientKnownRequestError) => {
+        if (err.code == 'P2002')
+          throw new ConflictException({
+            code: 'phone_number_already_linked',
+            message:
+              'The phone number provided is already associated with another account.',
+          });
+        throw new ServiceUnavailableException();
+      });
+
+    this.accountActivityService.create(
+      session,
+      sri,
+      safeAccountData.havePhoneNumber()
+        ? ActivityOperationType.UPDATE
+        : ActivityOperationType.CREATE,
+      safeAccountData.havePhoneNumber()
+        ? ActivityAction.PHONE_UPDATED
+        : ActivityAction.PHONE_ADDED,
+      safeAccountData.havePhoneNumber()
+        ? [
+            {
+              key: 'oldPhoneNumber',
+              value: safeAccountData.phone.number,
+            },
+            {
+              key: 'oldPhoneCallingCode',
+              value: safeAccountData.phone.prefix.replace('+', ''),
+            },
+          ]
+        : [],
+    );
   }
 
   public async resendPhoneVerification(
@@ -338,10 +430,29 @@ export class AccountService {
 
   public async verifyUpdateEmail(
     session: SessionEntity,
+    sri: SignificantRequestInformation,
     token: string,
     email: string,
     code: string,
   ) {
+    const account = await this.prisma.account.findUniqueOrThrow({
+      where: {
+        id: session.getAccount().id,
+      },
+    });
+
+    if (
+      account.emailVerifiedAt &&
+      account.emailVerifiedAt.getTime() +
+        AccountService.ALLOWED_UPDATE_EMAIL_AFTER >=
+        Date.now()
+    )
+      throw new BadRequestException({
+        code: 'email_update_temporarily_unavailable',
+        message:
+          'Email address updates are restricted to once every 14 days. You can update your email again after the cooldown period.',
+      });
+
     const verification = await this.emailVerificationService.verify(
       code,
       token,
@@ -369,6 +480,19 @@ export class AccountService {
           });
         throw new ServiceUnavailableException();
       });
+
+    this.accountActivityService.create(
+      session,
+      sri,
+      ActivityOperationType.UPDATE,
+      ActivityAction.EMAIL_UPDATED,
+      [
+        {
+          key: 'oldEmail',
+          value: account.email,
+        },
+      ],
+    );
   }
 
   public async resendUpdateEmail(
@@ -392,12 +516,17 @@ export class AccountService {
     );
   }
 
-  public async updatePassword(session: SessionEntity, d: UpdatePasswordDto) {
+  public async updatePassword(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+    d: UpdatePasswordDto,
+  ) {
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
       },
     });
+    const safeAccountData = new AccountEntity(account);
 
     await this.passwordValidation.validatePasswordIfRateLimitedRevokeSession(
       session,
@@ -405,7 +534,7 @@ export class AccountService {
       d.currentPassword,
     );
 
-    this.prisma.account.updateMany({
+    await this.prisma.account.updateMany({
       where: {
         id: session.getAccount().id,
       },
@@ -419,9 +548,32 @@ export class AccountService {
             : undefined,
       },
     });
+
+    this.accountActivityService.create(
+      session,
+      sri,
+      safeAccountData.isPasswordLess()
+        ? ActivityOperationType.CREATE
+        : ActivityOperationType.UPDATE,
+      safeAccountData.isPasswordLess()
+        ? ActivityAction.PASSWORD_ADDED
+        : ActivityAction.PASSWORD_UPDATED,
+      !safeAccountData.isPasswordLess()
+        ? [
+            {
+              key: 'oldPasswordHash',
+              value: account.passwordHash,
+            },
+          ]
+        : [],
+    );
   }
 
-  public async update(session: SessionEntity, d: UpdateAccountDto) {
+  public async update(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+    d: UpdateAccountDto,
+  ) {
     const account = await this.prisma.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -456,6 +608,23 @@ export class AccountService {
           displayName: d.displayName.trim(),
         },
       });
+
+      if (
+        account.displayName?.trim().toLowerCase() !==
+        d.displayName.trim().toLowerCase()
+      )
+        this.accountActivityService.create(
+          session,
+          sri,
+          ActivityOperationType.UPDATE,
+          ActivityAction.ACCOUNT_DATA_UPDATED,
+          [
+            {
+              key: 'oldDisplayName',
+              value: account.displayName,
+            },
+          ],
+        );
     }
   }
 }

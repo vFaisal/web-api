@@ -75,7 +75,7 @@ export class AuthController {
     @Body() body: PasswordRecoveryDto,
     @Req() req: FastifyRequest,
   ) {
-    return this.authenticateService.passwordRecovery(token, body.password);
+    return this.authenticateService.passwordRecovery(significantRequestInformation(req), token, body.password);
   }
 
   @Put('token')
@@ -93,8 +93,8 @@ export class AuthController {
   @Delete('token')
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  public revokeToken(@Req() req) {
+  public selfRevokeToken(@Req() req) {
     const session: SessionEntity = req.session;
-    return this.authenticateService.revokeToken(session);
+    return this.authenticateService.selfRevokeSession(session, significantRequestInformation(req));
   }
 }

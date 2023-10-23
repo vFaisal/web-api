@@ -12,7 +12,6 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '../auth/auth.guard';
 import SessionEntity from '../auth/entities/session.entity';
 import { FastifyRequest } from 'fastify';
 import StartPhoneVerificationDto from './dto/start-phone-verification.dto';
@@ -50,7 +49,11 @@ export class AccountController {
   async uploadPhoto(@Req() request: FastifyRequest) {
     const file = await request.file();
     const session: SessionEntity = (request as any).session;
-    return this.accountService.uploadPhoto(file, session);
+    return this.accountService.uploadPhoto(
+      file,
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Delete('photo')
@@ -58,7 +61,10 @@ export class AccountController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePhoto(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.accountService.deletePhoto(session);
+    return this.accountService.deletePhoto(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Delete('phone')
@@ -66,7 +72,10 @@ export class AccountController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePhone(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.accountService.deletePhone(session);
+    return this.accountService.deletePhone(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Post('update-phone/start-verification')
@@ -95,6 +104,7 @@ export class AccountController {
     const session: SessionEntity = (request as any).session;
     return this.accountService.verifyPhone(
       session,
+      significantRequestInformation(request),
       body.phoneNumber,
       token,
       body.code,
@@ -144,6 +154,7 @@ export class AccountController {
     const session: SessionEntity = (request as any).session;
     return this.accountService.verifyUpdateEmail(
       session,
+      significantRequestInformation(request),
       token,
       body.email,
       body.code,
@@ -175,7 +186,11 @@ export class AccountController {
     @Body() body: UpdatePasswordDto,
   ) {
     const session: SessionEntity = (request as any).session;
-    return this.accountService.updatePassword(session, body);
+    return this.accountService.updatePassword(
+      session,
+      significantRequestInformation(request),
+      body,
+    );
   }
 
   @Patch()
@@ -184,6 +199,10 @@ export class AccountController {
   async update(@Req() request: FastifyRequest, @Body() body: UpdateAccountDto) {
     console.log(body);
     const session: SessionEntity = (request as any).session;
-    return this.accountService.update(session, body);
+    return this.accountService.update(
+      session,
+      significantRequestInformation(request),
+      body,
+    );
   }
 }

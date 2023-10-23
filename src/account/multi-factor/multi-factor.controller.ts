@@ -2,24 +2,21 @@ import {
   Body,
   Controller,
   Delete,
-  Get,
   HttpCode,
   HttpStatus,
   Patch,
   Post,
-  Put,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { MultiFactorService } from './multi-factor.service';
 import { FastifyRequest } from 'fastify';
 import SessionEntity from '../../auth/entities/session.entity';
-import { AuthGuard } from '../../auth/auth.guard';
 import VerifyTotpEntity from './dto/verify-totp.entity';
 import {
   AccessLevel,
   Authorization,
 } from '../../core/security/authorization.decorator';
+import { significantRequestInformation } from '../../core/utils/util';
 
 @Controller({
   path: 'account/multi-factor',
@@ -44,7 +41,11 @@ export class MfaController {
     @Body() body: VerifyTotpEntity,
   ) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.verifyTOTP(session, body.digit);
+    return this.multiFactorService.verifyTOTP(
+      session,
+      significantRequestInformation(request),
+      body.digit,
+    );
   }
 
   @Delete('totp')
@@ -52,7 +53,10 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableTOTP(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.disableTOTP(session);
+    return this.multiFactorService.disableTOTP(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Post('sms')
@@ -60,7 +64,10 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public enableSMS(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.enableSMS(session);
+    return this.multiFactorService.enableSMS(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Delete('sms')
@@ -68,7 +75,10 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableSMS(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.disableSMS(session);
+    return this.multiFactorService.disableSMS(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Post('whatsapp')
@@ -76,7 +86,10 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public enableWhatsapp(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.enableWhatsapp(session);
+    return this.multiFactorService.enableWhatsapp(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Delete('whatsapp')
@@ -84,7 +97,10 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableWhatsapp(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.disableWhatsapp(session);
+    return this.multiFactorService.disableWhatsapp(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Post('email')
@@ -92,7 +108,10 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public enableEmail(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.enableEmail(session);
+    return this.multiFactorService.enableEmail(
+      session,
+      significantRequestInformation(request),
+    );
   }
 
   @Delete('email')
@@ -100,6 +119,9 @@ export class MfaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public disableEmail(@Req() request: FastifyRequest) {
     const session: SessionEntity = (request as any).session;
-    return this.multiFactorService.disableEmail(session);
+    return this.multiFactorService.disableEmail(
+      session,
+      significantRequestInformation(request),
+    );
   }
 }

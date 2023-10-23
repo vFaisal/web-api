@@ -1,31 +1,34 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createHmac } from 'crypto';
 import SessionEntity from '../../auth/entities/session.entity';
 import { AccountService } from '../account.service';
 import RedisService from '../../core/providers/redis.service';
 import {
-  base32Decode,
-  base32Encode,
   generateNanoId,
+  SignificantRequestInformation,
   unixTimestamp,
 } from '../../core/utils/util';
 import { PrismaService } from '../../core/providers/prisma.service';
 import TotpGlobalService from '../../core/services/totp.global.service';
+import AccountActivityGlobalService from '../../core/services/account-activity.global.service';
+import { ActivityAction, ActivityOperationType } from '@prisma/client';
 
 @Injectable()
 export class MultiFactorService {
   private static readonly VERIFICATION_EXPIRES = 60 * 10; //Seconds (10 Min);
 
   constructor(
-    private readonly config: ConfigService,
     private readonly accountService: AccountService,
     private readonly kv: RedisService,
     private readonly prisma: PrismaService,
     private readonly totpService: TotpGlobalService,
+    private readonly activityAccountService: AccountActivityGlobalService,
   ) {}
 
-  public async enableEmail(session: SessionEntity) {
+  public async enableEmail(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -52,10 +55,20 @@ export class MultiFactorService {
       },
     });
 
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.CREATE,
+      ActivityAction.MFA_EMAIL_ADDED,
+    );
+
     return;
   }
 
-  public async disableEmail(session: SessionEntity) {
+  public async disableEmail(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -75,10 +88,20 @@ export class MultiFactorService {
       },
     });
 
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.MFA_EMAIL_REMOVED,
+    );
+
     return;
   }
 
-  public async enableSMS(session: SessionEntity) {
+  public async enableSMS(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -99,16 +122,27 @@ export class MultiFactorService {
     await this.prisma.account.updateMany({
       data: {
         mfaSMS: new Date(),
+        mfaWhatsapp: null,
       },
       where: {
         id: account.raw.account.id,
       },
     });
 
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.CREATE,
+      ActivityAction.MFA_SMS_ADDED,
+    );
+
     return;
   }
 
-  public async disableSMS(session: SessionEntity) {
+  public async disableSMS(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -122,16 +156,34 @@ export class MultiFactorService {
     await this.prisma.account.updateMany({
       data: {
         mfaSMS: null,
+        mfaWhatsapp: null,
       },
       where: {
         id: account.raw.account.id,
       },
     });
 
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.MFA_SMS_REMOVED,
+    );
+    if (account.multiFactor.methods.whatsapp)
+      this.activityAccountService.create(
+        session,
+        sri,
+        ActivityOperationType.DELETE,
+        ActivityAction.MFA_WHATSAPP_REMOVED,
+      );
+
     return;
   }
 
-  public async enableWhatsapp(session: SessionEntity) {
+  public async enableWhatsapp(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -166,10 +218,20 @@ export class MultiFactorService {
       },
     });
 
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.CREATE,
+      ActivityAction.MFA_WHATSAPP_ADDED,
+    );
+
     return;
   }
 
-  public async disableWhatsapp(session: SessionEntity) {
+  public async disableWhatsapp(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -188,6 +250,13 @@ export class MultiFactorService {
         id: account.raw.account.id,
       },
     });
+
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.MFA_WHATSAPP_REMOVED,
+    );
 
     return;
   }
@@ -218,7 +287,11 @@ export class MultiFactorService {
     };
   }
 
-  public async verifyTOTP(session: SessionEntity, digit: string) {
+  public async verifyTOTP(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+    digit: string,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -260,9 +333,19 @@ export class MultiFactorService {
         id: account.raw.account.id,
       },
     });
+
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.CREATE,
+      ActivityAction.MFA_APP_ADDED,
+    );
   }
 
-  public async disableTOTP(session: SessionEntity) {
+  public async disableTOTP(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
     const account = await this.accountService.getSafeAccountData(
       session.getAccount().id,
     );
@@ -281,6 +364,13 @@ export class MultiFactorService {
         id: account.raw.account.id,
       },
     });
+
+    this.activityAccountService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.MFA_APP_REMOVED,
+    );
 
     return;
   }

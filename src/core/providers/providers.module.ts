@@ -6,8 +6,6 @@ import R2Service from './r2.service';
 import TwilioService from './twilio.service';
 import OpenaiService from './openai.service';
 import ResendService from './resend.service';
-import { Resend } from 'resend';
-import { ConfigService } from '@nestjs/config';
 
 @Global()
 @Module({
@@ -19,13 +17,6 @@ import { ConfigService } from '@nestjs/config';
     TwilioService,
     OpenaiService,
     ResendService,
-    {
-      provide: Resend,
-      useFactory: (config: ConfigService) => {
-        return new Resend(config.getOrThrow('RESEND_API_KEY'));
-      },
-      inject: [ConfigService],
-    },
   ],
   exports: [
     RedisService,

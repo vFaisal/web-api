@@ -8,10 +8,14 @@ import {
 import SessionEntity from '../../auth/entities/session.entity';
 import { PrismaService } from '../../core/providers/prisma.service';
 import TrustedAccountSessionEntity from './entities/trusted-account-session.entity';
-import { Prisma } from '@prisma/client';
+import { ActivityAction, ActivityOperationType, Prisma } from '@prisma/client';
 import RedisService from '../../core/providers/redis.service';
-import { unixTimestamp } from '../../core/utils/util';
+import {
+  SignificantRequestInformation,
+  unixTimestamp,
+} from '../../core/utils/util';
 import { AuthService } from '../../auth/auth.service';
+import AccountActivityGlobalService from '../../core/services/account-activity.global.service';
 
 @Injectable()
 export class SessionsService {
@@ -20,6 +24,7 @@ export class SessionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly kv: RedisService,
+    private readonly accountActivityService: AccountActivityGlobalService,
   ) {}
 
   public async getAll(session: SessionEntity) {
@@ -48,7 +53,7 @@ export class SessionsService {
     );
   }
 
-  public async deleteAll(session: SessionEntity) {
+  public async deleteAll(session: SessionEntity, sri: SignificantRequestInformation) {
     const targetActiveSessions = await this.prisma.accountSession.findMany({
       where: {
         accountId: session.getAccount().id,
@@ -106,13 +111,29 @@ export class SessionsService {
         revokedAt: new Date(),
       },
     });
+
+    await this.accountActivityService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.SESSION_REVOKED,
+      targetActiveSessions.map((s) => ({
+        key: 'sessionId',
+        value: String(s.id),
+      })),
+    );
   }
 
-  public async delete(session: SessionEntity, primarySessionId: string) {
+  public async delete(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+    primarySessionId: string,
+  ) {
     if (session.getPrimaryPublicId() === primarySessionId)
       throw new BadRequestException({
         code: 'self_session',
-        message: 'Deleting the current user session is not allowed.',
+        message:
+          'Deleting the current user session is not allowed in this endpoint.',
       });
     const targetActiveSession = await this.prisma.accountSession.findFirst({
       where: {
@@ -168,5 +189,18 @@ export class SessionsService {
     }
 
     await this.kv.del(`session:${token.publicId}`);
+
+    await this.accountActivityService.create(
+      session,
+      sri,
+      ActivityOperationType.DELETE,
+      ActivityAction.SESSION_REVOKED,
+      [
+        {
+          key: 'sessionId',
+          value: String(targetActiveSession.id),
+        },
+      ],
+    );
   }
 }

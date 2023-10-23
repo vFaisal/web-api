@@ -12,18 +12,24 @@ import CSRFService from '../../core/security/csrf.service';
 import PKCEService from '../../core/security/pkce.service';
 import RedisService from '../../core/providers/redis.service';
 import SessionEntity from '../../auth/entities/session.entity';
-import { Prisma, Provider } from '@prisma/client';
+import {
+  ActivityAction,
+  ActivityOperationType,
+  Prisma,
+  Provider,
+} from '@prisma/client';
 import {
   FederatedIdentitiesService,
   OAuth2Data,
 } from '../../auth/federated-identities/federated-identities.service';
 import { PrismaService } from '../../core/providers/prisma.service';
-import { capitalize } from '../../core/utils/util';
+import { capitalize, SignificantRequestInformation } from "../../core/utils/util";
 import { FacebookService } from '../../auth/federated-identities/facebook/facebook.service';
 import { MicrosoftService } from '../../auth/federated-identities/microsoft/microsoft.service';
 import { GithubService } from '../../auth/federated-identities/github/github.service';
 import { TwitterService } from '../../auth/federated-identities/twitter/twitter.service';
 import { AccountEntity } from '../entities/account.entity';
+import AccountActivityGlobalService from '../../core/services/account-activity.global.service';
 
 @Injectable()
 export class LinkService {
@@ -40,6 +46,7 @@ export class LinkService {
     private readonly csrfService: CSRFService,
     private readonly pkceService: PKCEService,
     private readonly kv: RedisService,
+    private readonly accountActivityService: AccountActivityGlobalService,
   ) {}
 
   private redirectUri(provider: Provider) {
@@ -96,13 +103,12 @@ export class LinkService {
         message: 'The requested service provider is unavailable.',
       });
 
-    console.log(uri);
-
     res.redirect(uri);
   }
 
   public async link(
     session: SessionEntity,
+    sri: SignificantRequestInformation,
     provider: Provider,
     state: string,
     code: string,
@@ -111,8 +117,6 @@ export class LinkService {
     const accountId = await this.kv.get<string>('link:' + state);
     if (BigInt(accountId) !== session.getAccount().id)
       throw new ForbiddenException();
-
-    console.log(provider);
 
     const user: OAuth2Data | null =
       provider === Provider.GOOGLE
@@ -175,9 +179,38 @@ export class LinkService {
           });
         throw new ServiceUnavailableException();
       });
+
+    const acitivtyAction = provider === Provider.META
+      ? ActivityAction.FACEBOOK_PROVIDER_CONNECTED
+      : provider === Provider.GOOGLE
+        ? ActivityAction.GOOGLE_PROVIDER_CONNECTED
+        : provider === Provider.MICROSOFT
+          ? ActivityAction.MICROSOFT_PROVIDER_CONNECTED
+          : provider === Provider.GITHUB
+            ? ActivityAction.GITHUB_PROVIDER_CONNECTED
+            : provider === Provider.TWITTER
+              ? ActivityAction.TWITTER_PROVIDER_CONNECTED
+              : null;
+
+   if(acitivtyAction) this.accountActivityService.create(
+      session,
+      sri,
+      ActivityOperationType.CREATE,
+      acitivtyAction,
+     [
+       {
+         key: "email",
+         value: user.email
+       },
+       {
+         key: "userId",
+         value: user.id
+       }
+     ]
+    );
   }
 
-  public async unlink(session: SessionEntity, provider: Provider) {
+  public async unlink(session: SessionEntity, sri: SignificantRequestInformation, provider: Provider) {
     const account = await this.prismaService.account.findUniqueOrThrow({
       where: {
         id: session.getAccount().id,
@@ -212,5 +245,34 @@ export class LinkService {
         id: federatedIdentity.id,
       },
     });
+
+    const acitivtyAction = provider === Provider.META
+      ? ActivityAction.FACEBOOK_PROVIDER_CONNECTED
+      : provider === Provider.GOOGLE
+        ? ActivityAction.GOOGLE_PROVIDER_CONNECTED
+        : provider === Provider.MICROSOFT
+          ? ActivityAction.MICROSOFT_PROVIDER_CONNECTED
+          : provider === Provider.GITHUB
+            ? ActivityAction.GITHUB_PROVIDER_CONNECTED
+            : provider === Provider.TWITTER
+              ? ActivityAction.TWITTER_PROVIDER_CONNECTED
+              : null;
+
+    if(acitivtyAction) this.accountActivityService.create(
+      session,
+      sri,
+      ActivityOperationType.CREATE,
+      acitivtyAction,
+      [
+        {
+          key: "email",
+          value: federatedIdentity.email
+        },
+        {
+          key: "userId",
+          value: federatedIdentity.userId
+        }
+      ]
+    );
   }
 }
