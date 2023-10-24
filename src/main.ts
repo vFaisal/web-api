@@ -15,6 +15,7 @@ import {
 } from '@nestjs/platform-fastify';
 import multipart from '@fastify/multipart';
 import * as process from 'process';
+import Constants from "./core/utils/constants";
 
 (async () => {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -36,7 +37,7 @@ import * as process from 'process';
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(helmet.hidePoweredBy());
   app.enableCors({
-    origin: ["http://local.faisal.gg", "https://side-project01.faisal.gg"],
+    origin: ["http://local.faisal.gg", Constants.FRONT_END_BASE_PROJECT_URI],
     credentials: true,
     methods: ["GET","POST", "PUT", "PATCH", "DELETE"],
 

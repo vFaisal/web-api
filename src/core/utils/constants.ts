@@ -1,4 +1,8 @@
 export default class Constants {
+  public static readonly FRONT_END_BASE_PROJECT_URI =
+    'https://account.side-project.faisal.gg';
+  public static readonly ACCESS_TOKEN_EXPIRATION = 60 * 60;
+
   public static readonly EMAIL_VALIDATION_REGEX =
     /^[\w\.-]{1,63}@[a-z0-9\.-]{1,63}\.\w{2,4}$/i;
   public static readonly PHONE_VALIDATION_REGEX = /^\+[1-9]\d{1,14}$/;

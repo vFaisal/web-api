@@ -23,8 +23,8 @@ import ServicesModule from './core/services/services.module';
     SecurityModule,
     AccountModule,
     AuthModule,
-    RegistrationModule,
-    AuthModule /*, ThrottlerModule*/,
+    RegistrationModule
+    /*, ThrottlerModule*/,
   ],
   controllers: [AppController],
 })

@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../providers/prisma.service';
 import RedisService from '../providers/redis.service';
 import { AuthService } from '../../auth/auth.service';
+import Constants from "../utils/constants";
 
 @Injectable()
 export default class SessionGlobalService {
@@ -93,7 +94,7 @@ export default class SessionGlobalService {
         .filter(
           (t) =>
             t.createdAt.getTime() >
-            Date.now() - AuthService.EXPIRATION.ACCESS_TOKEN * 1000,
+            Date.now() - Constants.ACCESS_TOKEN_EXPIRATION * 1000,
         )
         .map((t) => t.publicId),
     );

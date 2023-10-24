@@ -35,7 +35,7 @@ import SessionGlobalService from '../core/services/session.global.service';
 export class AuthService {
   private logger: Logger = new Logger('AuthService');
   public static readonly EXPIRATION = {
-    ACCESS_TOKEN: 60 * 60, // 1h (Seconds)
+    ACCESS_TOKEN: Constants.ACCESS_TOKEN_EXPIRATION, // 1h (Seconds)
     REFRESH_TOKEN: 60 * 60 * 24 * 14, // 14 Days (Seconds)
     MFA_VERIFY_TOKEN: 10 * 60, // 10m (Seconds)
     PASSWORD_RECOVERY_TOKEN: 2 * 60 * 60, // 2h (Seconds)
@@ -43,7 +43,7 @@ export class AuthService {
   private static readonly FAILED_LOGIN_ATTEMPTS_LIMIT = 20;
   private static readonly FAILED_LOGIN_ATTEMPTS_TTL = 25 * 60; // 30 mins time reset every attempt but the value the same.
   private static readonly PASSWORD_RECOVERY_BASE_URI =
-    'https://account.project.faisal.gg/forgot-password';
+    Constants.FRONT_END_BASE_PROJECT_URI + '/forgot-password';
 
   constructor(
     private readonly jwtService: JwtService,
@@ -54,7 +54,7 @@ export class AuthService {
     private readonly throttler: ThrottlerService,
     private readonly resend: ResendService,
     private readonly accountActivity: AccountActivityGlobalService,
-    private readonly sessionService: SessionGlobalService,
+    private readonly sessionGlobalService: SessionGlobalService,
   ) {}
 
   public async authenticate(
@@ -547,10 +547,10 @@ export class AuthService {
 
     await this.kv.del('passwordRecovery:' + token);
 
-    await this.sessionService.revokeAllActiveSession(account.id, {
-      excluded: [],
-      throwIfNoActiveSessions: false,
-    });
+    // await this.sessionGlobalService.revokeAllActiveSession(account.id, {
+    //   excluded: [],
+    //   throwIfNoActiveSessions: false,
+    // });
 
     await this.prisma.account.updateMany({
       where: {
