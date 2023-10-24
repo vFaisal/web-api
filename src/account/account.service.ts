@@ -32,6 +32,7 @@ import UpdateAccountDto from './dto/update-account.dto';
 import OpenaiService from '../core/providers/openai.service';
 import PasswordValidationGlobalService from '../core/services/password-validation.global.service';
 import AccountActivityGlobalService from '../core/services/account-activity.global.service';
+import SessionGlobalService from '../core/services/session.global.service';
 
 @Injectable()
 export class AccountService {
@@ -56,6 +57,7 @@ export class AccountService {
     private readonly openai: OpenaiService,
     private readonly passwordValidation: PasswordValidationGlobalService,
     private readonly accountActivityService: AccountActivityGlobalService,
+    private readonly sessionService: SessionGlobalService,
   ) {}
 
   public async getSafeAccountData(id: bigint) {
@@ -461,6 +463,11 @@ export class AccountService {
       session.getAccount().id,
     );
 
+    await this.sessionService.revokeAllActiveSession(session.getAccount().id, {
+      excluded: [session.getPrimaryPublicId()],
+      throwIfNoActiveSessions: false,
+    });
+
     await this.prisma.account
       .updateMany({
         data: {
@@ -533,6 +540,11 @@ export class AccountService {
       account,
       d.currentPassword,
     );
+
+    await this.sessionService.revokeAllActiveSession(session.getAccount().id, {
+      excluded: [session.getPrimaryPublicId()],
+      throwIfNoActiveSessions: false,
+    });
 
     await this.prisma.account.updateMany({
       where: {
@@ -626,5 +638,18 @@ export class AccountService {
           ],
         );
     }
+  }
+
+  public async deleteAccount(session: SessionEntity) {
+    await this.sessionService.revokeAllActiveSession(session.getAccount().id, {
+      excluded: [],
+      throwIfNoActiveSessions: false,
+    });
+
+    await this.prisma.account.delete({
+      where: {
+        id: session.getAccount().id,
+      },
+    });
   }
 }

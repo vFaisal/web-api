@@ -29,6 +29,7 @@ import Constants from '../core/utils/constants';
 import { AccessLevel } from '../core/security/authorization.decorator';
 import ResendService from '../core/providers/resend.service';
 import AccountActivityGlobalService from '../core/services/account-activity.global.service';
+import SessionGlobalService from '../core/services/session.global.service';
 
 @Injectable()
 export class AuthService {
@@ -53,6 +54,7 @@ export class AuthService {
     private readonly throttler: ThrottlerService,
     private readonly resend: ResendService,
     private readonly accountActivity: AccountActivityGlobalService,
+    private readonly sessionService: SessionGlobalService,
   ) {}
 
   public async authenticate(
@@ -119,10 +121,10 @@ export class AuthService {
           ActivityAction.ACCOUNT_PASSWORD_LOCKED,
           [
             {
-              key: "passwordUnlockTimestamp",
-              value: String(unlockedTime.getTime())
-            }
-          ]
+              key: 'passwordUnlockTimestamp',
+              value: String(unlockedTime.getTime()),
+            },
+          ],
         );
       }
       await this.kv.setex(
@@ -544,6 +546,11 @@ export class AuthService {
     });
 
     await this.kv.del('passwordRecovery:' + token);
+
+    await this.sessionService.revokeAllActiveSession(account.id, {
+      excluded: [],
+      throwIfNoActiveSessions: false,
+    });
 
     await this.prisma.account.updateMany({
       where: {

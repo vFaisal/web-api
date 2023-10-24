@@ -2,11 +2,10 @@ import {
   BadRequestException,
   Injectable,
   Logger,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../providers/prisma.service';
 import RedisService from '../providers/redis.service';
-import { Prisma } from '@prisma/client';
+import { AuthService } from '../../auth/auth.service';
 
 @Injectable()
 export default class SessionGlobalService {
@@ -43,5 +42,77 @@ export default class SessionGlobalService {
     }
 
     await this.kv.del(`session:${secondaryId}`);
+  }
+
+  public async revokeAllActiveSession(
+    accountId: bigint,
+    {
+      excluded,
+      throwIfNoActiveSessions,
+    }: { excluded?: string[]; throwIfNoActiveSessions?: boolean },
+  ) {
+    const targetActiveSessions = await this.prisma.accountSession.findMany({
+      where: {
+        accountId: accountId,
+        NOT: {
+          publicId: {
+            notIn: excluded,
+          },
+        },
+        revokedAt: null,
+        tokens: {
+          every: {
+            expires: {
+              gte: new Date(),
+            },
+          },
+        },
+      },
+      select: {
+        tokens: {
+          orderBy: {
+            id: 'desc',
+          },
+          take: 1,
+        },
+        id: true,
+      },
+    });
+
+    if (targetActiveSessions.length < 1) {
+      if (!throwIfNoActiveSessions) return;
+      throw new BadRequestException({
+        code: 'no_active_sessions',
+        message:
+          'There are no active sessions to delete, except for the currently active session.',
+      });
+    }
+
+    const activeSessionsNeedToRevoke = targetActiveSessions.flatMap((s) =>
+      s.tokens
+        .filter(
+          (t) =>
+            t.createdAt.getTime() >
+            Date.now() - AuthService.EXPIRATION.ACCESS_TOKEN * 1000,
+        )
+        .map((t) => t.publicId),
+    );
+
+    for (const sid of activeSessionsNeedToRevoke) {
+      await this.kv.del(`session:${sid}`);
+    }
+
+    await this.prisma.accountSession.updateMany({
+      where: {
+        id: {
+          in: targetActiveSessions.map((s) => s.id),
+        },
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    return targetActiveSessions;
   }
 }

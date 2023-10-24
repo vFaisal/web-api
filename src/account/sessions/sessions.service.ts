@@ -16,6 +16,7 @@ import {
 } from '../../core/utils/util';
 import { AuthService } from '../../auth/auth.service';
 import AccountActivityGlobalService from '../../core/services/account-activity.global.service';
+import SessionGlobalService from '../../core/services/session.global.service';
 
 @Injectable()
 export class SessionsService {
@@ -25,6 +26,7 @@ export class SessionsService {
     private readonly prisma: PrismaService,
     private readonly kv: RedisService,
     private readonly accountActivityService: AccountActivityGlobalService,
+    private readonly sessionService: SessionGlobalService,
   ) {}
 
   public async getAll(session: SessionEntity) {
@@ -53,64 +55,18 @@ export class SessionsService {
     );
   }
 
-  public async deleteAll(session: SessionEntity, sri: SignificantRequestInformation) {
-    const targetActiveSessions = await this.prisma.accountSession.findMany({
-      where: {
-        accountId: session.getAccount().id,
-        NOT: {
-          publicId: session.getPrimaryPublicId(),
+  public async deleteAll(
+    session: SessionEntity,
+    sri: SignificantRequestInformation,
+  ) {
+    const targetActiveSessions =
+      await this.sessionService.revokeAllActiveSession(
+        session.getAccount().id,
+        {
+          excluded: [session.getPrimaryPublicId()],
+          throwIfNoActiveSessions: true,
         },
-        revokedAt: null,
-        tokens: {
-          every: {
-            expires: {
-              gte: new Date(),
-            },
-          },
-        },
-      },
-      select: {
-        tokens: {
-          orderBy: {
-            id: 'desc',
-          },
-          take: 1,
-        },
-        id: true,
-      },
-    });
-
-    if (targetActiveSessions.length < 1)
-      throw new BadRequestException({
-        code: 'no_active_sessions',
-        message:
-          'There are no active sessions to delete, except for the currently active session.',
-      });
-
-    const activeSessionsNeedToRevoke = targetActiveSessions.flatMap((s) =>
-      s.tokens
-        .filter(
-          (t) =>
-            t.createdAt.getTime() >
-            Date.now() - AuthService.EXPIRATION.ACCESS_TOKEN * 1000,
-        )
-        .map((t) => t.publicId),
-    );
-
-    for (const sid of activeSessionsNeedToRevoke) {
-      await this.kv.del(`session:${sid}`);
-    }
-
-    await this.prisma.accountSession.updateMany({
-      where: {
-        id: {
-          in: targetActiveSessions.map((s) => s.id),
-        },
-      },
-      data: {
-        revokedAt: new Date(),
-      },
-    });
+      );
 
     await this.accountActivityService.create(
       session,

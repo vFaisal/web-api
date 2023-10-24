@@ -197,12 +197,21 @@ export class AccountController {
   @Authorization(AccessLevel.MEDIUM)
   @HttpCode(HttpStatus.NO_CONTENT)
   async update(@Req() request: FastifyRequest, @Body() body: UpdateAccountDto) {
-    console.log(body);
     const session: SessionEntity = (request as any).session;
     return this.accountService.update(
       session,
       significantRequestInformation(request),
       body,
+    );
+  }
+
+  @Delete()
+  @Authorization(AccessLevel.MEDIUM)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(@Req() request: FastifyRequest) {
+    const session: SessionEntity = (request as any).session;
+    return this.accountService.deleteAccount(
+      session,
     );
   }
 }
