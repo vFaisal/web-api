@@ -35,8 +35,13 @@ import * as process from 'process';
   );
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(helmet.hidePoweredBy());
+  app.enableCors({
+    origin: ["http://local.faisal.gg", "https://side-project01.faisal.gg"],
+    credentials: true,
+    methods: ["GET","POST", "PUT", "PATCH", "DELETE"],
+
+  })
   await app.register(multipart);
-  // app.use(multipart);
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: VERSION_NEUTRAL,
