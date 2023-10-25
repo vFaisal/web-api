@@ -20,7 +20,6 @@ export default class RecaptchaGuard implements CanActivate {
   ) {}
 
   public async canActivate(context: ExecutionContext): Promise<boolean> {
-    return true;
     if (this.config.getOrThrow('NODE_ENV') !== 'production') return true;
 
     const action = this.reflector.get<string>(

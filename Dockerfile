@@ -1,15 +1,15 @@
-FROM node:18.16.0 as build
+FROM node:20.8.1 as build
 WORKDIR /app
 COPY package*.json .
 COPY prisma ./prisma/
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
 
-FROM node:18.16.0
+FROM node:20.8.1
 WORKDIR /app
 COPY package.json .
-RUN npm install --only=production
+RUN npm install --only=production --legacy-peer-deps
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./
 ENV NODE_ENV production

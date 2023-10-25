@@ -110,16 +110,16 @@ model Visitor {
 
 model AccountActivity {
   id             BigInt                @id @default(autoincrement()) @db.UnsignedBigInt
-  accountId BigInt @db.UnsignedBigInt
-  sessionTokenId BigInt?                @db.UnsignedBigInt
+  accountId      BigInt                @db.UnsignedBigInt
+  sessionTokenId BigInt?               @db.UnsignedBigInt
   visitorId      BigInt                @db.UnsignedBigInt
   publicId       String                @unique @db.VarChar(16)
   operationType  ActivityOperationType
   action         ActivityAction
   createdAt      DateTime              @default(now()) @db.Timestamp(0)
   data           AccountActivityData[]
-  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  sessionToken   AccountSessionTokens?  @relation(fields: [sessionTokenId], references: [id], onDelete: Cascade)
+  account        Account               @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  sessionToken   AccountSessionTokens? @relation(fields: [sessionTokenId], references: [id], onDelete: Cascade)
   visitor        Visitor               @relation(fields: [visitorId], references: [id], onDelete: Cascade)
 
   @@index([sessionTokenId])
