@@ -114,7 +114,7 @@ export default class EmailVerificationGlobalService {
         code: String(randomDigit),
         accountId: unique.type === 'account' ? String(unique.identifier) : null,
         resend: 0,
-        lastResendTimestamp: null,
+        lastResendTimestamp: Date.now(),
         attempts: 0,
       },
     );
