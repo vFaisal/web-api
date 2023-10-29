@@ -3,6 +3,7 @@ import { lookup } from 'geoip-lite';
 import { UAParser } from 'ua-parser-js';
 import Constants from './constants';
 import { FastifyRequest } from 'fastify';
+import { InternalServerErrorException } from '@nestjs/common';
 
 export function generateNanoId(size = 16): string {
   return customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', size)();
@@ -39,18 +40,23 @@ export type SignificantRequestInformation = {
 export function significantRequestInformation(
   req: FastifyRequest,
 ): SignificantRequestInformation {
-  console.log(req.headers)
-  console.log(req.headers['X-Forwarded-For'])
-  const ipAddress = req.headers['X-Forwarded-For'] as string;
-  const geo = lookup(ipAddress);
-  const countryCode = geo?.country ?? null;
+  /*
+   * This custom headers must be configured by load balancer.
+   */
+  const ipAddress = req.headers['x-client-real-ip'] as string;
+  const city = req.headers['x-client-geo-city'] as string;
+  const regionSubdivision = req.headers[
+    'x-client-geo-region-subdivision'
+  ] as string;
+  const countryCode = req.headers['x-client-geo-region'] as string;
   const country = countryCode ? Constants.COUNTRIES[countryCode] : null;
+  if (!ipAddress || !countryCode) throw new InternalServerErrorException();
   return {
     ipAddress,
-    city: geo?.city ?? null,
-    region: geo?.region ?? null,
-    countryCode: geo?.country ?? null,
-    country: country,
+    city: city ?? null,
+    region: regionSubdivision ?? null,
+    countryCode: countryCode,
+    country: country ?? null,
     isp: null,
     userAgent: req.headers['user-agent'],
   };

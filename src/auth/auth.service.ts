@@ -259,7 +259,7 @@ export class AuthService {
               create: {
                 publicId: generateNanoId(),
                 ipAddress: significantRequestInformation.ipAddress,
-                counterCode: significantRequestInformation.countryCode,
+                countryCode: significantRequestInformation.countryCode,
                 city: significantRequestInformation.city,
                 region: significantRequestInformation.region,
                 isp: significantRequestInformation.isp,
@@ -361,7 +361,7 @@ export class AuthService {
       data: {
         publicId: generateNanoId(),
         ipAddress: significantRequestInformation.ipAddress,
-        counterCode: significantRequestInformation.countryCode,
+        countryCode: significantRequestInformation.countryCode,
         city: significantRequestInformation.city,
         region: significantRequestInformation.region,
         isp: significantRequestInformation.isp,

@@ -47,7 +47,7 @@ export class RegistrationService {
     const account = await this.prisma.account
       .create({
         data: {
-          countryCode: 'SA',
+          countryCode: significantRequestInformation.countryCode,
           emailVerifiedAt: new Date(),
           email: registration.email,
           passwordHash: await hash(params.password, {

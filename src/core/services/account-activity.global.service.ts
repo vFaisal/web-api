@@ -50,7 +50,7 @@ export default class AccountActivityGlobalService {
             city: sri.city,
             region: sri.region,
             ipAddress: sri.ipAddress,
-            counterCode: sri.countryCode,
+            countryCode: sri.countryCode,
           },
         },
         account: {

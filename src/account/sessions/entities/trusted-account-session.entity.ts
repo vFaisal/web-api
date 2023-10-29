@@ -27,6 +27,15 @@ export default class TrustedAccountSessionEntity {
     this.id = session.publicId;
     this.activity = session.tokens.map((t) => {
       let userAgentParsed = new UAParser(t.visitor.userAgent);
+      const countryCode =
+        t.visitor.countryCode?.length === 2 ? t.visitor.countryCode : null;
+      const country = Constants.COUNTRIES[countryCode] ?? null;
+      const region = t.visitor.region ?? null;
+      const city = t.visitor.city ?? null;
+      const location =
+        country && city
+          ? `${country}, ${city}${region ? ` (${region})` : ''}`
+          : null;
       return {
         client: {
           os: {
@@ -44,11 +53,11 @@ export default class TrustedAccountSessionEntity {
             brand: userAgentParsed.getDevice().vendor ?? null,
           },
         },
-        counter: Constants.COUNTRIES[t.visitor.counterCode] ?? null,
-        counterCode:
-          t.visitor.counterCode?.length === 2 ? t.visitor.counterCode : null,
-        location: null,
-        region: null,
+        country,
+        countryCode,
+        location,
+        city,
+        region,
         ip:
           t.visitor.ipAddress && isIP(t.visitor.ipAddress)
             ? t.visitor.ipAddress
@@ -72,8 +81,8 @@ export default class TrustedAccountSessionEntity {
 
 interface ActivityLogin {
   ip: string;
-  counter: string;
-  counterCode: string;
+  country: string;
+  countryCode: string;
   location: string;
   region: string | null;
   client: {

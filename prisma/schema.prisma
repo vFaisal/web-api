@@ -99,7 +99,7 @@ model Visitor {
   publicId             String                @unique @db.VarChar(16)
   userAgent            String                @db.VarChar(200)
   ipAddress            String                @db.VarChar(128)
-  counterCode          String?               @db.Char(2)
+  countryCode          String?               @db.Char(2)
   region               String?               @db.VarChar(100)
   city                 String?               @db.VarChar(100)
   isp                  String?               @db.VarChar(100)
