@@ -1,12 +1,8 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../providers/prisma.service';
 import RedisService from '../providers/redis.service';
 import { AuthService } from '../../auth/auth.service';
-import Constants from "../utils/constants";
+import Constants from '../utils/constants';
 
 @Injectable()
 export default class SessionGlobalService {
@@ -55,10 +51,8 @@ export default class SessionGlobalService {
     const targetActiveSessions = await this.prisma.accountSession.findMany({
       where: {
         accountId: accountId,
-        NOT: {
-          publicId: {
-            notIn: excluded,
-          },
+        publicId: {
+          notIn: excluded,
         },
         revokedAt: null,
         tokens: {

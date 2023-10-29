@@ -8,6 +8,7 @@ import {
 import EmailVerificationGlobalService from '../../core/services/email-verification.global.service';
 import VerifyEmailDto from './dto/verify-email.dto';
 import ResendEmailVerificationDto from './dto/resend-email-verification.dto';
+import { SignificantRequestInformation } from "../../core/utils/util";
 
 @Injectable()
 export class VerificationService {
@@ -30,7 +31,7 @@ export class VerificationService {
     };
   }
 
-  public async createEmailVerification(email: string, ip: string) {
+  public async createEmailVerification(email: string, sri: SignificantRequestInformation) {
     const existAccount = await this.prisma.account.findUnique({
       where: {
         email: email,
@@ -50,7 +51,7 @@ export class VerificationService {
       email,
       {
         type: 'ip',
-        identifier: ip,
+        identifier: sri.ipAddress,
       },
       'registration',
       this.emailVerificationMessage,

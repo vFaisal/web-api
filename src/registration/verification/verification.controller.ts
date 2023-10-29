@@ -5,9 +5,7 @@ import {
   HttpStatus,
   Patch,
   Post,
-  Put,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { VerificationService } from './verification.service';
 import CreateEmailVerificationDto from './dto/create-email-verification.dto';
@@ -16,6 +14,7 @@ import { Recaptcha } from '../../core/security/recaptch.decorator';
 import { FastifyRequest } from 'fastify';
 import ParseNanoidPipe from '../../shared/pipes/parse-nanoid.pipe';
 import ResendEmailVerificationDto from './dto/resend-email-verification.dto';
+import { significantRequestInformation } from "../../core/utils/util";
 
 @Controller({
   path: 'registration/verification',
@@ -28,7 +27,7 @@ export class VerificationController {
   @HttpCode(HttpStatus.CREATED)
   @Recaptcha('registration')
   root(@Body() body: CreateEmailVerificationDto, @Req() req: FastifyRequest) {
-    return this.verificationService.createEmailVerification(body.email, req.ip);
+    return this.verificationService.createEmailVerification(body.email, significantRequestInformation(req));
   }
 
   @Post('/email/resend')

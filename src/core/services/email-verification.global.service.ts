@@ -89,15 +89,15 @@ export default class EmailVerificationGlobalService {
     else if (this.config.get('NODE_ENV') === 'production')
       await this.throttler.throwIfRateLimited(
         'emailVerificationService:ip:' + unique.identifier,
-        15 * 60,
-        2,
+        25 * 60,
+        3,
         'ip',
       );
 
     await this.throttler.throwIfRateLimited(
       'emailVerificationService:email:' + email,
-      15 * 60,
-      5,
+      25 * 60,
+      6,
       'data',
     );
 

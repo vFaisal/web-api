@@ -39,7 +39,9 @@ export type SignificantRequestInformation = {
 export function significantRequestInformation(
   req: FastifyRequest,
 ): SignificantRequestInformation {
-  const ipAddress = req.ip;
+  console.log(req.headers)
+  console.log(req.headers['X-Forwarded-For'])
+  const ipAddress = req.headers['X-Forwarded-For'] as string;
   const geo = lookup(ipAddress);
   const countryCode = geo?.country ?? null;
   const country = countryCode ? Constants.COUNTRIES[countryCode] : null;
