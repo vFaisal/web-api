@@ -1,9 +1,9 @@
 import {
-  BadRequestException,
+  BadRequestException, ConflictException,
   Injectable,
   Logger,
-  ServiceUnavailableException,
-} from '@nestjs/common';
+  ServiceUnavailableException
+} from "@nestjs/common";
 import { PrismaService } from '../core/providers/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { argon2id, hash, verify } from 'argon2';
@@ -16,9 +16,9 @@ import {
 import {
   Account,
   ActivityAction,
-  ActivityOperationType,
-  SessionType,
-} from '@prisma/client';
+  ActivityOperationType, Prisma,
+  SessionType
+} from "@prisma/client";
 import { ConfigService } from '@nestjs/config';
 import SessionEntity from './entities/session.entity';
 import RedisService from '../core/providers/redis.service';
@@ -368,7 +368,7 @@ export class AuthService {
         userAgent: significantRequestInformation.userAgent,
       },
     });
-    const session = await this.prisma.accountSessionTokens.create({
+     await this.prisma.accountSessionTokens.create({
       data: {
         accessLevel: 'NONE',
         publicId: jwt.payload.spi,
@@ -378,6 +378,13 @@ export class AuthService {
         ref: refreshTokenPayload.tkn,
         visitorId: visitor.id,
       },
+    }).catch((err: Prisma.PrismaClientKnownRequestError) => {
+      if (err.code == 'P2002')
+        throw new BadRequestException({
+          code: 'invalid_refresh_token',
+          message: 'The provided refresh token is invalid or expired.',
+        });
+      throw new ServiceUnavailableException();
     });
 
     const sessionCache = await this.addCredentialsToSessionCache(
