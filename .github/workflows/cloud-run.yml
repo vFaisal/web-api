@@ -11,7 +11,7 @@ env:
   REGION: europe-west1
   REPO_NAME: p01
 
-jobs: 
+jobs:
   build-and-deploy:
     name: Setup, Build, and Deploy
     runs-on: ubuntu-latest

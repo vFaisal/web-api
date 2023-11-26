@@ -9,7 +9,7 @@ export default class TotpGlobalService {
   private static readonly ALGORITHM = 'sha1';
   private static readonly ISSUER = 'faisal.gg';
   public static readonly DIGITS = 6;
-  private static readonly PERIOD = 30;
+  public static readonly PERIOD = 30;
 
   constructor(private readonly config: ConfigService) {}
 

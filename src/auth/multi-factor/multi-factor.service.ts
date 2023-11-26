@@ -338,27 +338,25 @@ export class MultiFactorService {
           'The requested Multi-Factor Authentication method is not available or cannot be used for the current account.',
       });
 
+    const lastTotpAttemptTimestamp = (await this.kv.get<number>(`lastTotpAttemptTimestamp:${String(account.id)}`)) ?? 0
+
+
+    const now = unixTimestamp();
+    const currentIntervalStart = now - (now % TotpGlobalService.PERIOD)
+
     if (
-      multiFactorLogin.totpAttempts >= MultiFactorService.ALLOWED_TOTP_ATTEMPTS
+      lastTotpAttemptTimestamp >= currentIntervalStart
     )
       throw new HttpException(
         {
-          code: 'mfa_rate_limit_exceeded',
+          code: 'totp_interval_rate_limited',
           message:
-            'You have exceeded the maximum number of attempts for MFA login using TOTP.',
+            'You have already attempted to use a TOTP code in this interval. Please wait for a new code to be generated before trying again.',
         },
         429,
       );
 
-    await this.kv.setex<MultiFactorLogin>(
-      `MFALogin:${token}`,
-      unixTimestamp(AuthService.EXPIRATION.MFA_VERIFY_TOKEN),
-      {
-        accountId: String(safeAccountData.raw.account.id),
-        totpAttempts: multiFactorLogin.totpAttempts + 1,
-        sessionType: multiFactorLogin.sessionType,
-      },
-    );
+    await this.kv.setex(`lastTotpAttemptTimestamp:${String(account.id)}`, unixTimestamp(TotpGlobalService.PERIOD), unixTimestamp())
 
     const generatedCode = this.totpService.generateCode(
       this.totpService.createSecret(account.mfaAppKey),
@@ -369,7 +367,7 @@ export class MultiFactorService {
       throw new BadRequestException({
         code: 'invalid_totp_code',
         message:
-          "The TOTP code you entered is invalid. Make sure you're using the correct code from your authenticator app.",
+          "The provided TOTP code is invalid. Please wait for the next code to be generated before trying again.",
       });
     }
 
@@ -546,7 +544,6 @@ interface MultiFactorVerification {
 }
 
 export interface MultiFactorLogin {
-  totpAttempts: number;
   accountId: string;
   sessionType: SessionType;
 }
