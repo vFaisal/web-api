@@ -212,7 +212,6 @@ export class AuthService {
         AuthService.EXPIRATION.MFA_VERIFY_TOKEN,
         {
           accountId: String(safeAccountData.raw.account.id),
-          totpAttempts: 0,
           sessionType: sessionType,
         },
       );
