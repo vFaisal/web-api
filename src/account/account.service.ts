@@ -38,7 +38,6 @@ import SessionGlobalService from '../core/services/session.global.service';
 export class AccountService {
   private readonly logger: Logger = new Logger('AccountService');
 
-  private static readonly UPDATE_EMAIL_PERIOD = 10 * 60; // 10min (Seconds)
   private static readonly ALLOWED_UPDATE_EMAIL_AFTER = 14 * 24 * 60 * 60 * 1000; // 14days (Milliseconds);
   private static readonly ATTEMPTS_UPDATE_PASSWORD_LIMIT = 15;
   private static readonly ATTEMPTS_UPDATE_PASSWORD_TTL = 15 * 60;
@@ -414,7 +413,7 @@ export class AccountService {
 
     const safeAccountDate = new AccountEntity(account);
 
-    const verificationToken = await this.emailVerificationService.start(
+    return  this.emailVerificationService.start(
       email,
       {
         type: 'account',
@@ -424,10 +423,6 @@ export class AccountService {
       this.getUpdateEmailMessage(safeAccountDate, sri),
     );
 
-    return {
-      token: verificationToken,
-      expires: unixTimestamp(AccountService.UPDATE_EMAIL_PERIOD),
-    };
   }
 
   public async verifyUpdateEmail(

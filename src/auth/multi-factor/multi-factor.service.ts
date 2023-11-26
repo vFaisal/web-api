@@ -189,7 +189,7 @@ export class MultiFactorService {
             'The requested Multi-Factor Authentication method is not available or cannot be used for the current account. Please try another available MFA method.',
         });
 
-      const emailVerificationToken = await this.emailVerificationService.start(
+      const emailVerification = await this.emailVerificationService.start(
         safeAccountData.email,
         {
           type: 'account',
@@ -208,7 +208,7 @@ export class MultiFactorService {
         AuthService.EXPIRATION.MFA_VERIFY_TOKEN,
         {
           accountId: String(safeAccountData.raw.account.id),
-          verificationToken: emailVerificationToken,
+          verificationToken: emailVerification.token,
           method: data.method,
           ref: token,
           sessionType: multiFactorLogin.sessionType,

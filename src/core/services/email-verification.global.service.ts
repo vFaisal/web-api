@@ -47,7 +47,7 @@ export default class EmailVerificationGlobalService {
       subject: string;
     },
     tokenLength?: number,
-  ): Promise<string>;
+  ): Promise<{token: string, expires: number}>;
   public async start(
     email: string,
     unique: {
@@ -60,7 +60,7 @@ export default class EmailVerificationGlobalService {
       subject: string;
     },
     tokenLength?: number,
-  ): Promise<string>;
+  ): Promise<{token: string, expires: number}>;
   public async start(
     email: string,
     unique: {
@@ -73,7 +73,7 @@ export default class EmailVerificationGlobalService {
       subject: string;
     },
     tokenLength = 16,
-  ): Promise<string> {
+  ): Promise<{token: string, expires: number}> {
     if (!message.description.includes('######')) {
       this.logger.debug('Message not contain ###### to processed', message);
       throw new ServiceUnavailableException();
@@ -126,7 +126,10 @@ export default class EmailVerificationGlobalService {
     } else
       this.logger.debug(`[Email: ${email}] Verification code: `, randomDigit);
 
-    return token;
+    return {
+      token: token,
+      expires: unixTimestamp(EmailVerificationGlobalService.VERIFICATION_EXPIRATION)
+    };
   }
 
   public async resend(
@@ -189,8 +192,11 @@ export default class EmailVerificationGlobalService {
     } else
       this.logger.debug(`[Email: ${email}] Verification code: `, cache.code);
 
+    const remaining = EmailVerificationGlobalService.DEFAULT_RESEND - cache.resend - 1;
+
     return {
-      nextResend: unixTimestamp(EmailVerificationGlobalService.RESEND_COOLDOWN),
+      nextResend: remaining > 0 ? unixTimestamp(EmailVerificationGlobalService.RESEND_COOLDOWN) : null,
+      remaining: remaining
     };
   }
 

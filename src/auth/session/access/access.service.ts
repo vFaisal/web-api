@@ -113,7 +113,8 @@ export class AccessService {
       },
     });
     const safeAccountData = new AccountEntity(account);
-    const verificationToken = await this.emailVerificationService.start(
+
+    return this.emailVerificationService.start(
       account.email,
       {
         type: 'account',
@@ -122,13 +123,6 @@ export class AccessService {
       'generateMediumAccessLevel',
       this.getEmailMessage(safeAccountData, sri),
     );
-
-    return {
-      token: verificationToken,
-      expires: unixTimestamp(
-        EmailVerificationGlobalService.VERIFICATION_EXPIRATION,
-      ),
-    };
   }
 
   public async verifyRequestMediumAccessByEmail(

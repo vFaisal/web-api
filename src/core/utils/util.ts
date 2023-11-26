@@ -50,7 +50,10 @@ export function significantRequestInformation(
   ] as string;
   const countryCode = req.headers['x-client-geo-region'] as string;
   const country = countryCode ? Constants.COUNTRIES[countryCode] : null;
-  if (!ipAddress || !countryCode) throw new InternalServerErrorException();
+  if (!ipAddress || !countryCode) {
+    console.error("Header not been configured.", req.headers)
+    throw new InternalServerErrorException();
+  }
   return {
     ipAddress,
     city: city ?? null,

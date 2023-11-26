@@ -47,7 +47,7 @@ export class VerificationService {
           'Email address is already associated with an existing account. Please login or use a different email address to create a new account.',
       });
 
-    const token = await this.emailVerificationService.start(
+    return this.emailVerificationService.start(
       email,
       {
         type: 'ip',
@@ -57,10 +57,6 @@ export class VerificationService {
       this.emailVerificationMessage,
       64,
     );
-
-    return {
-      token,
-    };
   }
 
   public async resendEmailVerification(
